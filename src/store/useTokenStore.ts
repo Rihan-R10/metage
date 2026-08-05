@@ -1,6 +1,14 @@
 import { create } from 'zustand';
 import { pollProviderTelemetry } from '@/lib/adapters';
-import { decryptApiKey, getEncryptedKey } from '@/lib/vault';
+import {
+  decryptApiKey,
+  encryptApiKey,
+  getEncryptedKey,
+  storeEncryptedKey,
+  removeEncryptedKey,
+  clearVault,
+  hasAnyEncryptedKey,
+} from '@/lib/vault';
 import type { ProviderId, RateLimitStatus, UsageLog, ProviderStatus } from '@/types';
 import { MOCK_ACCOUNTS, MOCK_LAST_REFRESH_AT, MOCK_REFERENCE_NOW, MOCK_USAGE_LOGS } from '@/lib/mockData';
 
@@ -20,15 +28,25 @@ export interface MetricsSummary {
   totalTokens: number;
 }
 
+export interface ApiKeysInput {
+  openai?: string;
+  anthropic?: string;
+  openrouter?: string;
+}
+
 interface TokenStore {
   accounts: ProviderAccount[];
   usageLogs: UsageLog[];
   isPolling: boolean;
   lastRefreshAt: string | null;
   masterPasscode: string | null;
+  hasKeys: boolean;
   setMasterPasscode: (passcode: string | null) => void;
   pollAllProviders: () => Promise<void>;
   getMetricsSummary: () => MetricsSummary;
+  saveApiKeys: (keys: ApiKeysInput) => Promise<void>;
+  clearApiKeys: () => void;
+  checkKeysStatus: () => boolean;
 }
 
 function deriveStatus(rateLimit: RateLimitStatus | null): ProviderStatus {
@@ -86,19 +104,81 @@ export const useTokenStore = create<TokenStore>((set, get) => ({
   isPolling: false,
   lastRefreshAt: MOCK_LAST_REFRESH_AT,
   masterPasscode: null,
+  hasKeys: false,
 
   setMasterPasscode: (passcode) => set({ masterPasscode: passcode }),
 
+  checkKeysStatus: () => {
+    const hasConfigured = hasAnyEncryptedKey();
+    set({ hasKeys: hasConfigured });
+    return hasConfigured;
+  },
+
+  saveApiKeys: async (keys) => {
+    let passcode = get().masterPasscode;
+    if (!passcode) {
+      passcode = 'tokendash-vault-passcode';
+      set({ masterPasscode: passcode });
+    }
+
+    if (keys.openai !== undefined) {
+      if (keys.openai.trim()) {
+        const enc = await encryptApiKey(keys.openai.trim(), passcode);
+        storeEncryptedKey('openai', enc);
+        storeEncryptedKey('openai-prod', enc);
+      } else {
+        removeEncryptedKey('openai');
+        removeEncryptedKey('openai-prod');
+      }
+    }
+
+    if (keys.anthropic !== undefined) {
+      if (keys.anthropic.trim()) {
+        const enc = await encryptApiKey(keys.anthropic.trim(), passcode);
+        storeEncryptedKey('anthropic', enc);
+        storeEncryptedKey('anthropic-prod', enc);
+      } else {
+        removeEncryptedKey('anthropic');
+        removeEncryptedKey('anthropic-prod');
+      }
+    }
+
+    if (keys.openrouter !== undefined) {
+      if (keys.openrouter.trim()) {
+        const enc = await encryptApiKey(keys.openrouter.trim(), passcode);
+        storeEncryptedKey('openrouter', enc);
+        storeEncryptedKey('openrouter-prod', enc);
+      } else {
+        removeEncryptedKey('openrouter');
+        removeEncryptedKey('openrouter-prod');
+      }
+    }
+
+    const hasConfigured = hasAnyEncryptedKey();
+    set({ hasKeys: hasConfigured });
+
+    if (hasConfigured) {
+      void get().pollAllProviders();
+    }
+  },
+
+  clearApiKeys: () => {
+    clearVault();
+    set({ hasKeys: false });
+  },
+
   pollAllProviders: async () => {
     const { accounts, masterPasscode } = get();
+    const passcode = masterPasscode ?? 'tokendash-vault-passcode';
     set({ isPolling: true });
 
     const updatedAccounts: ProviderAccount[] = [];
     const aggregatedLogs: UsageLog[] = [];
 
     for (const account of accounts) {
-      const encryptedKey = getEncryptedKey(account.id);
-      if (!encryptedKey || !masterPasscode) {
+      const encryptedKey =
+        getEncryptedKey(account.id) ?? getEncryptedKey(account.providerId);
+      if (!encryptedKey) {
         updatedAccounts.push({
           ...account,
           status: account.status,
@@ -108,7 +188,7 @@ export const useTokenStore = create<TokenStore>((set, get) => ({
       }
 
       try {
-        const apiKey = await decryptApiKey(encryptedKey, masterPasscode);
+        const apiKey = await decryptApiKey(encryptedKey, passcode);
         const telemetry = await pollProviderTelemetry(account.providerId, apiKey);
 
         updatedAccounts.push({

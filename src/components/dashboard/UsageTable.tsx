@@ -50,7 +50,7 @@ const LOG_TIMESTAMP_OPTIONS: Intl.DateTimeFormatOptions = {
 
 function TimestampCell({ timestamp }: { timestamp: string }) {
   const formatted = useFormattedDate(timestamp, LOG_TIMESTAMP_OPTIONS);
-  return <>{formatted}</>;
+  return <span suppressHydrationWarning>{formatted}</span>;
 }
 
 function filterLogsByTimeframe(logs: UsageLog[], timeframe: Timeframe): UsageLog[] {
@@ -149,7 +149,7 @@ export function UsageTable() {
                       transition={{ duration: 0.25, delay: index * 0.02 }}
                       className="transition hover:bg-slate-900/50"
                     >
-                      <td className="whitespace-nowrap px-4 py-3 text-sm text-zinc-300">
+                      <td className="whitespace-nowrap px-4 py-3 text-sm text-zinc-300" suppressHydrationWarning>
                         <TimestampCell timestamp={log.timestamp} />
                       </td>
                       <td className="whitespace-nowrap px-4 py-3 text-sm">

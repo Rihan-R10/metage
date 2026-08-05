@@ -145,3 +145,24 @@ export function storeEncryptedKey(
 export function getEncryptedKey(providerAccountId: string): string | null {
   return readVault()[providerAccountId] ?? null;
 }
+
+export function removeEncryptedKey(providerAccountId: string): void {
+  const vault = readVault();
+  delete vault[providerAccountId];
+  writeVault(vault);
+}
+
+export function clearVault(): void {
+  if (typeof window === 'undefined') {
+    return;
+  }
+  window.localStorage.removeItem(VAULT_STORAGE_KEY);
+}
+
+export function hasAnyEncryptedKey(): boolean {
+  const vault = readVault();
+  return Object.values(vault).some(
+    (val) => typeof val === 'string' && val.trim().length > 0
+  );
+}
+

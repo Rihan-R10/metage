@@ -45,7 +45,7 @@ const POLLED_AT_OPTIONS: Intl.DateTimeFormatOptions = {
 function PolledAtCell({ polledAt }: { polledAt: string | null | undefined }) {
   const formatted = useFormattedDate(polledAt, POLLED_AT_OPTIONS);
 
-  return <>{formatted}</>;
+  return <span suppressHydrationWarning>{formatted}</span>;
 }
 
 function StatusDot({ status }: { status: ProviderStatus }) {
