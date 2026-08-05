@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import type { ProviderId } from '@/types';
 
-const PROVIDER_BASES: Record<ProviderId, string> = {
+const PROVIDER_BASES: Partial<Record<ProviderId, string>> = {
   openai: 'https://api.openai.com/v1',
   anthropic: 'https://api.anthropic.com/v1',
+  groq: 'https://api.groq.com/openai/v1',
   openrouter: 'https://openrouter.ai/api/v1',
 };
 
@@ -18,7 +19,12 @@ interface ProxyRequestBody {
 }
 
 function isProviderId(value: unknown): value is ProviderId {
-  return value === 'openai' || value === 'anthropic' || value === 'openrouter';
+  return (
+    value === 'openai' ||
+    value === 'anthropic' ||
+    value === 'groq' ||
+    value === 'openrouter'
+  );
 }
 
 function buildProviderHeaders(
@@ -36,6 +42,7 @@ function buildProviderHeaders(
         'anthropic-version': '2023-06-01',
         'content-type': 'application/json',
       };
+    case 'groq':
     case 'openrouter':
       return {
         Authorization: `Bearer ${apiKey}`,
@@ -107,6 +114,9 @@ export async function POST(request: NextRequest) {
   }
 
   const baseUrl = PROVIDER_BASES[providerId];
+  if (!baseUrl) {
+    return NextResponse.json({ error: 'Unsupported provider.' }, { status: 400 });
+  }
   const url = `${baseUrl}${normalizedEndpoint}`;
   const headers = buildProviderHeaders(providerId, apiKey);
 

@@ -1,4 +1,6 @@
-export type ProviderId = 'openai' | 'anthropic' | 'openrouter';
+export type ProviderId = 'openai' | 'anthropic' | 'groq' | 'openrouter';
+
+export type ProviderStatus = 'NORMAL' | 'WARN' | 'EXHAUSTED';
 
 export interface RateLimitStatus {
   requestsRemaining: number | null;

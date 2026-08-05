@@ -4,9 +4,8 @@ import { pollOpenRouter } from '@/lib/adapters/openrouter';
 import { proxyFetch } from '@/lib/adapters/proxy';
 import type { ProviderId, ProviderTelemetry } from '@/types';
 
-const ADAPTERS: Record<
-  ProviderId,
-  (apiKey: string) => Promise<ProviderTelemetry>
+const ADAPTERS: Partial<
+  Record<ProviderId, (apiKey: string) => Promise<ProviderTelemetry>>
 > = {
   openai: pollOpenAI,
   anthropic: pollAnthropic,

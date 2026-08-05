@@ -1,32 +1,31 @@
 'use client';
 
-import { AlertTriangle, CheckCircle2, HelpCircle, XCircle } from 'lucide-react';
-import { useTokenStore, type ProviderHealth } from '@/store/useTokenStore';
+import { motion } from 'framer-motion';
+import { useTokenStore } from '@/store/useTokenStore';
+import type { ProviderStatus } from '@/types';
 import { cn } from '@/lib/utils';
 
-const HEALTH_CONFIG: Record<
-  ProviderHealth,
-  { label: string; icon: typeof CheckCircle2; className: string }
+const STATUS_CONFIG: Record<
+  ProviderStatus,
+  { label: string; dotClass: string; badgeClass: string; pulse: boolean }
 > = {
-  online: {
-    label: 'Online',
-    icon: CheckCircle2,
-    className: 'text-emerald-400 border-emerald-500/30 bg-emerald-500/10',
+  NORMAL: {
+    label: 'Normal',
+    dotClass: 'bg-emerald-400',
+    badgeClass: 'text-emerald-400 border-emerald-500/30 bg-emerald-500/10',
+    pulse: true,
   },
-  degraded: {
-    label: 'Degraded',
-    icon: AlertTriangle,
-    className: 'text-amber-400 border-amber-500/30 bg-amber-500/10',
+  WARN: {
+    label: 'Warning',
+    dotClass: 'bg-amber-400',
+    badgeClass: 'text-amber-400 border-amber-500/30 bg-amber-500/10',
+    pulse: true,
   },
-  offline: {
-    label: 'Offline',
-    icon: XCircle,
-    className: 'text-red-400 border-red-500/30 bg-red-500/10',
-  },
-  unknown: {
-    label: 'Unknown',
-    icon: HelpCircle,
-    className: 'text-zinc-400 border-slate-700 bg-slate-900',
+  EXHAUSTED: {
+    label: 'Exhausted',
+    dotClass: 'bg-red-400',
+    badgeClass: 'text-red-400 border-red-500/30 bg-red-500/10',
+    pulse: true,
   },
 };
 
@@ -37,7 +36,24 @@ function formatMetric(value: number | null | undefined): string {
   return new Intl.NumberFormat('en-US').format(value);
 }
 
-export function ProviderHealthGrid() {
+function StatusDot({ status }: { status: ProviderStatus }) {
+  const config = STATUS_CONFIG[status];
+
+  return (
+    <span className="relative flex h-2.5 w-2.5">
+      {config.pulse && (
+        <motion.span
+          className={cn('absolute inline-flex h-full w-full rounded-full opacity-75', config.dotClass)}
+          animate={{ scale: [1, 1.8, 1], opacity: [0.75, 0, 0.75] }}
+          transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+        />
+      )}
+      <span className={cn('relative inline-flex h-2.5 w-2.5 rounded-full', config.dotClass)} />
+    </span>
+  );
+}
+
+export function ProviderHealth() {
   const accounts = useTokenStore((state) => state.accounts);
 
   return (
@@ -52,14 +68,16 @@ export function ProviderHealthGrid() {
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {accounts.map((account) => {
-          const health = HEALTH_CONFIG[account.health];
-          const HealthIcon = health.icon;
+        {accounts.map((account, index) => {
+          const status = STATUS_CONFIG[account.status];
           const rateLimit = account.rateLimit;
 
           return (
-            <article
+            <motion.article
               key={account.id}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3, delay: 0.2 + index * 0.08 }}
               className="rounded-xl border border-slate-800 bg-slate-950/60 p-5"
             >
               <div className="flex items-start justify-between gap-3">
@@ -71,12 +89,12 @@ export function ProviderHealthGrid() {
                 </div>
                 <span
                   className={cn(
-                    'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium',
-                    health.className
+                    'inline-flex items-center gap-2 rounded-full border px-2.5 py-1 text-xs font-medium',
+                    status.badgeClass
                   )}
                 >
-                  <HealthIcon className="h-3.5 w-3.5" />
-                  {health.label}
+                  <StatusDot status={account.status} />
+                  {status.label}
                 </span>
               </div>
 
@@ -129,7 +147,7 @@ export function ProviderHealthGrid() {
                   {account.errorMessage}
                 </p>
               )}
-            </article>
+            </motion.article>
           );
         })}
       </div>

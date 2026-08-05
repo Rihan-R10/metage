@@ -1,57 +1,44 @@
 import { create } from 'zustand';
 import { pollProviderTelemetry } from '@/lib/adapters';
 import { decryptApiKey, getEncryptedKey } from '@/lib/vault';
-import type { ProviderId, RateLimitStatus, UsageLog } from '@/types';
-
-export type ProviderHealth = 'online' | 'degraded' | 'offline' | 'unknown';
+import type { ProviderId, RateLimitStatus, UsageLog, ProviderStatus } from '@/types';
+import { MOCK_ACCOUNTS, MOCK_USAGE_LOGS } from '@/lib/mockData';
 
 export interface ProviderAccount {
   id: string;
   providerId: ProviderId;
   name: string;
   rateLimit: RateLimitStatus | null;
-  health: ProviderHealth;
+  status: ProviderStatus;
   errorMessage?: string;
 }
 
-export interface DashboardKpis {
-  requestsRemaining: number | null;
-  tokensRemaining: number | null;
-  creditsRemaining: number | null;
-  providersOnline: number;
-  totalProviders: number;
+export interface MetricsSummary {
+  todaySpend: number;
+  activeBurnRate: number;
+  projectedMonthlySpend: number;
+  totalTokens: number;
 }
 
-const DEFAULT_ACCOUNTS: ProviderAccount[] = [
-  {
-    id: 'openai-default',
-    providerId: 'openai',
-    name: 'OpenAI',
-    rateLimit: null,
-    health: 'unknown',
-  },
-  {
-    id: 'anthropic-default',
-    providerId: 'anthropic',
-    name: 'Anthropic',
-    rateLimit: null,
-    health: 'unknown',
-  },
-  {
-    id: 'openrouter-default',
-    providerId: 'openrouter',
-    name: 'OpenRouter',
-    rateLimit: null,
-    health: 'unknown',
-  },
-];
+interface TokenStore {
+  accounts: ProviderAccount[];
+  usageLogs: UsageLog[];
+  isPolling: boolean;
+  lastRefreshAt: string | null;
+  masterPasscode: string | null;
+  setMasterPasscode: (passcode: string | null) => void;
+  pollAllProviders: () => Promise<void>;
+  getMetricsSummary: () => MetricsSummary;
+}
 
-function deriveHealth(rateLimit: RateLimitStatus | null): ProviderHealth {
+function deriveStatus(rateLimit: RateLimitStatus | null): ProviderStatus {
   if (!rateLimit) {
-    return 'unknown';
+    return 'WARN';
   }
 
-  const checks: Array<{ remaining: number | null; limit: number | null }> = [
+  const ratios: number[] = [];
+
+  for (const { remaining, limit } of [
     {
       remaining: rateLimit.requestsRemaining,
       limit: rateLimit.requestsLimit,
@@ -64,46 +51,40 @@ function deriveHealth(rateLimit: RateLimitStatus | null): ProviderHealth {
       remaining: rateLimit.creditsRemaining,
       limit: rateLimit.creditsLimit,
     },
-  ];
-
-  for (const { remaining, limit } of checks) {
+  ]) {
     if (remaining === null || limit === null || limit <= 0) {
       continue;
     }
-
-    const ratio = remaining / limit;
-    if (ratio <= 0.2) {
-      return 'degraded';
-    }
+    ratios.push(remaining / limit);
   }
 
-  return 'online';
-}
-
-function sumNullable(values: Array<number | null>): number | null {
-  const defined = values.filter((value): value is number => value !== null);
-  if (defined.length === 0) {
-    return null;
+  if (ratios.length === 0) {
+    return 'NORMAL';
   }
-  return defined.reduce((total, value) => total + value, 0);
+
+  const lowest = Math.min(...ratios);
+  if (lowest <= 0.05) {
+    return 'EXHAUSTED';
+  }
+  if (lowest <= 0.25) {
+    return 'WARN';
+  }
+  return 'NORMAL';
 }
 
-interface TokenStore {
-  accounts: ProviderAccount[];
-  usageLogs: UsageLog[];
-  isPolling: boolean;
-  lastRefreshAt: string | null;
-  masterPasscode: string | null;
-  setMasterPasscode: (passcode: string | null) => void;
-  pollAllProviders: () => Promise<void>;
-  getKpis: () => DashboardKpis;
+function isSameDay(a: Date, b: Date): boolean {
+  return (
+    a.getFullYear() === b.getFullYear() &&
+    a.getMonth() === b.getMonth() &&
+    a.getDate() === b.getDate()
+  );
 }
 
 export const useTokenStore = create<TokenStore>((set, get) => ({
-  accounts: DEFAULT_ACCOUNTS,
-  usageLogs: [],
+  accounts: MOCK_ACCOUNTS,
+  usageLogs: MOCK_USAGE_LOGS,
   isPolling: false,
-  lastRefreshAt: null,
+  lastRefreshAt: new Date().toISOString(),
   masterPasscode: null,
 
   setMasterPasscode: (passcode) => set({ masterPasscode: passcode }),
@@ -120,7 +101,7 @@ export const useTokenStore = create<TokenStore>((set, get) => ({
       if (!encryptedKey || !masterPasscode) {
         updatedAccounts.push({
           ...account,
-          health: 'unknown',
+          status: account.status,
           errorMessage: 'No encrypted API key configured.',
         });
         continue;
@@ -133,14 +114,14 @@ export const useTokenStore = create<TokenStore>((set, get) => ({
         updatedAccounts.push({
           ...account,
           rateLimit: telemetry.rateLimit,
-          health: deriveHealth(telemetry.rateLimit),
+          status: deriveStatus(telemetry.rateLimit),
           errorMessage: undefined,
         });
         aggregatedLogs.push(...telemetry.latestLogs);
       } catch (error) {
         updatedAccounts.push({
           ...account,
-          health: 'offline',
+          status: 'EXHAUSTED',
           errorMessage:
             error instanceof Error ? error.message : 'Telemetry poll failed.',
         });
@@ -153,29 +134,43 @@ export const useTokenStore = create<TokenStore>((set, get) => ({
     );
 
     set({
-      accounts: updatedAccounts,
-      usageLogs: aggregatedLogs,
+      accounts: updatedAccounts.length > 0 ? updatedAccounts : get().accounts,
+      usageLogs:
+        aggregatedLogs.length > 0 ? aggregatedLogs : get().usageLogs,
       isPolling: false,
       lastRefreshAt: new Date().toISOString(),
     });
   },
 
-  getKpis: () => {
-    const { accounts } = get();
+  getMetricsSummary: () => {
+    const { usageLogs } = get();
+    const now = new Date();
+    const last24Hours = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+
+    const todayLogs = usageLogs.filter((log) =>
+      isSameDay(new Date(log.timestamp), now)
+    );
+    const recentLogs = usageLogs.filter(
+      (log) => new Date(log.timestamp) >= last24Hours
+    );
+
+    const todaySpend = todayLogs.reduce((sum, log) => sum + (log.cost ?? 0), 0);
+    const last24hSpend = recentLogs.reduce(
+      (sum, log) => sum + (log.cost ?? 0),
+      0
+    );
+    const activeBurnRate = last24hSpend / 24;
+    const projectedMonthlySpend = activeBurnRate * 24 * 30;
+    const totalTokens = usageLogs.reduce(
+      (sum, log) => sum + (log.totalTokens ?? 0),
+      0
+    );
 
     return {
-      requestsRemaining: sumNullable(
-        accounts.map((account) => account.rateLimit?.requestsRemaining ?? null)
-      ),
-      tokensRemaining: sumNullable(
-        accounts.map((account) => account.rateLimit?.tokensRemaining ?? null)
-      ),
-      creditsRemaining: sumNullable(
-        accounts.map((account) => account.rateLimit?.creditsRemaining ?? null)
-      ),
-      providersOnline: accounts.filter((account) => account.health === 'online')
-        .length,
-      totalProviders: accounts.length,
+      todaySpend,
+      activeBurnRate,
+      projectedMonthlySpend,
+      totalTokens,
     };
   },
 }));
