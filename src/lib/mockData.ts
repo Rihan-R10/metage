@@ -5,8 +5,12 @@ const OPENAI_MODELS = ['gpt-4o', 'gpt-4o-mini', 'o1-mini'];
 const ANTHROPIC_MODELS = ['claude-3-5-sonnet-latest', 'claude-3-5-haiku-latest'];
 const GROQ_MODELS = ['llama-3.3-70b-versatile', 'mixtral-8x7b-32768'];
 
+export const MOCK_REFERENCE_NOW = '2026-08-04T16:35:14.000Z';
+export const MOCK_LAST_REFRESH_AT = MOCK_REFERENCE_NOW;
+
 function hoursAgo(hours: number): string {
-  return new Date(Date.now() - hours * 60 * 60 * 1000).toISOString();
+  const base = new Date(MOCK_REFERENCE_NOW).getTime();
+  return new Date(base - hours * 60 * 60 * 1000).toISOString();
 }
 
 function createRateLimit(

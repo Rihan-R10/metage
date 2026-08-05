@@ -1,8 +1,15 @@
 'use client';
 
 import { Activity, RefreshCw, Shield } from 'lucide-react';
+import { useFormattedDate } from '@/hooks/useFormattedDate';
 import { useTokenStore } from '@/store/useTokenStore';
 import { cn } from '@/lib/utils';
+
+const SYNC_TIME_OPTIONS: Intl.DateTimeFormatOptions = {
+  hour: 'numeric',
+  minute: '2-digit',
+  second: '2-digit',
+};
 
 export function DashboardHeader() {
   const isPolling = useTokenStore((state) => state.isPolling);
@@ -10,13 +17,11 @@ export function DashboardHeader() {
   const masterPasscode = useTokenStore((state) => state.masterPasscode);
   const pollAllProviders = useTokenStore((state) => state.pollAllProviders);
 
-  const formattedRefresh = lastRefreshAt
-    ? new Intl.DateTimeFormat('en-US', {
-        hour: 'numeric',
-        minute: '2-digit',
-        second: '2-digit',
-      }).format(new Date(lastRefreshAt))
-    : 'Never';
+  const formattedRefresh = useFormattedDate(
+    lastRefreshAt,
+    SYNC_TIME_OPTIONS,
+    'Never'
+  );
 
   return (
     <header className="border-b border-slate-800 bg-[#09090b]/95 backdrop-blur">
@@ -47,7 +52,9 @@ export function DashboardHeader() {
               Vault {masterPasscode ? 'unlocked' : 'locked'}
             </span>
             <span className="text-zinc-700">·</span>
-            <span>Last sync {formattedRefresh}</span>
+            <span suppressHydrationWarning>
+              Last sync {formattedRefresh}
+            </span>
           </div>
 
           <button

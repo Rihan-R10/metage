@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { pollProviderTelemetry } from '@/lib/adapters';
 import { decryptApiKey, getEncryptedKey } from '@/lib/vault';
 import type { ProviderId, RateLimitStatus, UsageLog, ProviderStatus } from '@/types';
-import { MOCK_ACCOUNTS, MOCK_USAGE_LOGS } from '@/lib/mockData';
+import { MOCK_ACCOUNTS, MOCK_LAST_REFRESH_AT, MOCK_REFERENCE_NOW, MOCK_USAGE_LOGS } from '@/lib/mockData';
 
 export interface ProviderAccount {
   id: string;
@@ -84,7 +84,7 @@ export const useTokenStore = create<TokenStore>((set, get) => ({
   accounts: MOCK_ACCOUNTS,
   usageLogs: MOCK_USAGE_LOGS,
   isPolling: false,
-  lastRefreshAt: new Date().toISOString(),
+  lastRefreshAt: MOCK_LAST_REFRESH_AT,
   masterPasscode: null,
 
   setMasterPasscode: (passcode) => set({ masterPasscode: passcode }),
@@ -144,7 +144,7 @@ export const useTokenStore = create<TokenStore>((set, get) => ({
 
   getMetricsSummary: () => {
     const { usageLogs } = get();
-    const now = new Date();
+    const now = new Date(MOCK_REFERENCE_NOW);
     const last24Hours = new Date(now.getTime() - 24 * 60 * 60 * 1000);
 
     const todayLogs = usageLogs.filter((log) =>
