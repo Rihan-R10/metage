@@ -1,84 +1,54 @@
 import { NextRequest, NextResponse } from 'next/server';
+import crypto from 'crypto';
 import type { ProviderId } from '@/types';
 
-const PROVIDER_BASES: Partial<Record<ProviderId, string>> = {
+const PROVIDER_BASES: Record<string, string> = {
   openai: 'https://api.openai.com/v1',
   anthropic: 'https://api.anthropic.com/v1',
   groq: 'https://api.groq.com/openai/v1',
   openrouter: 'https://openrouter.ai/api/v1',
 };
 
-const RATE_LIMIT_HEADER_PREFIXES = ['x-ratelimit-', 'anthropic-ratelimit-'];
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization, x-api-key',
+};
 
 interface ProxyRequestBody {
+  provider?: string;
   providerId?: ProviderId;
   apiKey?: string;
   endpoint?: string;
   method?: 'GET' | 'POST';
+  headers?: Record<string, string>;
   body?: unknown;
 }
 
-function isProviderId(value: unknown): value is ProviderId {
-  return (
-    value === 'openai' ||
-    value === 'anthropic' ||
-    value === 'groq' ||
-    value === 'openrouter'
-  );
-}
-
-function buildProviderHeaders(
-  providerId: ProviderId,
-  apiKey: string
-): Record<string, string> {
-  switch (providerId) {
-    case 'openai':
-      return {
-        Authorization: `Bearer ${apiKey}`,
-      };
-    case 'anthropic':
-      return {
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01',
-        'content-type': 'application/json',
-      };
-    case 'groq':
-    case 'openrouter':
-      return {
-        Authorization: `Bearer ${apiKey}`,
-      };
+function decryptKeyIfNeeded(apiKey: string): string {
+  const secret = process.env.ENCRYPTION_SECRET;
+  if (!secret || !apiKey.includes(':')) {
+    return apiKey;
   }
-}
-
-function extractRateLimitHeaders(headers: Headers): Record<string, string> {
-  const rateLimitHeaders: Record<string, string> = {};
-
-  headers.forEach((value, key) => {
-    const lowerKey = key.toLowerCase();
-    if (
-      RATE_LIMIT_HEADER_PREFIXES.some((prefix) => lowerKey.startsWith(prefix))
-    ) {
-      rateLimitHeaders[key] = value;
-    }
-  });
-
-  return rateLimitHeaders;
-}
-
-function normalizeEndpoint(endpoint: string): string | null {
-  if (!endpoint.startsWith('/') || endpoint.startsWith('//')) {
-    return null;
-  }
-
   try {
-    const parsed = new URL(endpoint, 'https://proxy.local');
-    if (parsed.origin !== 'https://proxy.local') {
-      return null;
-    }
-    return `${parsed.pathname}${parsed.search}`;
+    const [ivHex, encryptedHex] = apiKey.split(':');
+    if (!ivHex || !encryptedHex) return apiKey;
+    const key = crypto.createHash('sha256').update(secret).digest();
+    const iv = Buffer.from(ivHex, 'hex');
+    const decipher = crypto.createDecipheriv('aes-256-cbc', key, iv);
+    let decrypted = decipher.update(encryptedHex, 'hex', 'utf8');
+    decrypted += decipher.final('utf8');
+    return decrypted;
   } catch {
-    return null;
+    return apiKey;
   }
+}
+
+export async function OPTIONS() {
+  return new NextResponse(null, {
+    status: 204,
+    headers: corsHeaders,
+  });
 }
 
 export async function POST(request: NextRequest) {
@@ -87,63 +57,111 @@ export async function POST(request: NextRequest) {
   try {
     payload = (await request.json()) as ProxyRequestBody;
   } catch {
-    return NextResponse.json({ error: 'Invalid JSON body.' }, { status: 400 });
+    return NextResponse.json(
+      { error: 'Invalid JSON body.' },
+      { status: 400, headers: corsHeaders }
+    );
   }
 
-  const { providerId, apiKey, endpoint, method = 'GET', body } = payload;
+  const rawProvider = payload.provider || payload.providerId;
+  const provider = rawProvider?.toLowerCase();
 
-  if (!isProviderId(providerId)) {
-    return NextResponse.json({ error: 'Invalid providerId.' }, { status: 400 });
+  if (!provider || !PROVIDER_BASES[provider]) {
+    return NextResponse.json(
+      { error: `Invalid or unsupported provider: ${rawProvider}` },
+      { status: 400, headers: corsHeaders }
+    );
   }
 
-  if (!apiKey || typeof apiKey !== 'string') {
-    return NextResponse.json({ error: 'Missing apiKey.' }, { status: 400 });
+  const rawApiKey = payload.apiKey;
+  if (!rawApiKey || typeof rawApiKey !== 'string') {
+    return NextResponse.json(
+      { error: 'Missing apiKey.' },
+      { status: 400, headers: corsHeaders }
+    );
   }
 
+  const apiKey = decryptKeyIfNeeded(rawApiKey);
+
+  const endpoint = payload.endpoint;
   if (!endpoint || typeof endpoint !== 'string') {
-    return NextResponse.json({ error: 'Missing endpoint.' }, { status: 400 });
+    return NextResponse.json(
+      { error: 'Missing endpoint.' },
+      { status: 400, headers: corsHeaders }
+    );
   }
 
-  const normalizedEndpoint = normalizeEndpoint(endpoint);
-  if (!normalizedEndpoint) {
-    return NextResponse.json({ error: 'Invalid endpoint.' }, { status: 400 });
-  }
+  const normalizedEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+  const baseUrl = PROVIDER_BASES[provider];
+  const targetUrl = `${baseUrl}${normalizedEndpoint}`;
 
-  if (method !== 'GET' && method !== 'POST') {
-    return NextResponse.json({ error: 'Invalid method.' }, { status: 400 });
-  }
+  const requestHeaders: Record<string, string> = {
+    'Content-Type': 'application/json',
+    ...(payload.headers || {}),
+  };
 
-  const baseUrl = PROVIDER_BASES[providerId];
-  if (!baseUrl) {
-    return NextResponse.json({ error: 'Unsupported provider.' }, { status: 400 });
-  }
-  const url = `${baseUrl}${normalizedEndpoint}`;
-  const headers = buildProviderHeaders(providerId, apiKey);
-
-  const providerResponse = await fetch(url, {
-    method,
-    headers,
-    body:
-      method === 'POST' && body !== undefined ? JSON.stringify(body) : undefined,
-    cache: 'no-store',
-  });
-
-  const responseText = await providerResponse.text();
-  let responseBody: unknown = responseText;
-
-  if (responseText) {
-    try {
-      responseBody = JSON.parse(responseText);
-    } catch {
-      responseBody = responseText;
+  if (!requestHeaders['Authorization'] && !requestHeaders['x-api-key']) {
+    if (provider === 'anthropic') {
+      requestHeaders['x-api-key'] = apiKey;
+      requestHeaders['anthropic-version'] = '2023-06-01';
+    } else {
+      requestHeaders['Authorization'] = `Bearer ${apiKey}`;
     }
-  } else {
-    responseBody = null;
   }
 
-  return NextResponse.json({
-    status: providerResponse.status,
-    body: responseBody,
-    headers: extractRateLimitHeaders(providerResponse.headers),
-  });
+  const method = payload.method || 'GET';
+
+  try {
+    const providerResponse = await fetch(targetUrl, {
+      method,
+      headers: requestHeaders,
+      body:
+        method === 'POST' && payload.body !== undefined
+          ? JSON.stringify(payload.body)
+          : undefined,
+      cache: 'no-store',
+    });
+
+    const responseText = await providerResponse.text();
+    let responseBody: unknown = responseText;
+
+    if (responseText) {
+      try {
+        responseBody = JSON.parse(responseText);
+      } catch {
+        responseBody = responseText;
+      }
+    } else {
+      responseBody = null;
+    }
+
+    const rateLimitHeaders: Record<string, string> = {};
+    providerResponse.headers.forEach((value, key) => {
+      if (key.toLowerCase().includes('ratelimit')) {
+        rateLimitHeaders[key] = value;
+      }
+    });
+
+    return NextResponse.json(
+      {
+        status: providerResponse.status,
+        body: responseBody,
+        headers: rateLimitHeaders,
+      },
+      {
+        status: 200,
+        headers: corsHeaders,
+      }
+    );
+  } catch (error) {
+    return NextResponse.json(
+      {
+        error: error instanceof Error ? error.message : 'Proxy fetch failed',
+      },
+      {
+        status: 500,
+        headers: corsHeaders,
+      }
+    );
+  }
 }

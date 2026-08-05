@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { pollProviderTelemetry } from '@/lib/adapters';
+import { fetchOpenRouterTelemetry, pollProviderTelemetry } from '@/lib/adapters';
 import {
   decryptApiKey,
   encryptApiKey,
@@ -37,12 +37,15 @@ export interface ApiKeysInput {
 interface TokenStore {
   accounts: ProviderAccount[];
   usageLogs: UsageLog[];
+  logs: UsageLog[];
   isPolling: boolean;
   lastRefreshAt: string | null;
+  lastSync: string | null;
   masterPasscode: string | null;
   hasKeys: boolean;
   setMasterPasscode: (passcode: string | null) => void;
   pollAllProviders: () => Promise<void>;
+  syncNow: () => Promise<void>;
   getMetricsSummary: () => MetricsSummary;
   saveApiKeys: (keys: ApiKeysInput) => Promise<void>;
   clearApiKeys: () => void;
@@ -101,8 +104,10 @@ function isSameDay(a: Date, b: Date): boolean {
 export const useTokenStore = create<TokenStore>((set, get) => ({
   accounts: MOCK_ACCOUNTS,
   usageLogs: MOCK_USAGE_LOGS,
+  logs: MOCK_USAGE_LOGS,
   isPolling: false,
   lastRefreshAt: MOCK_LAST_REFRESH_AT,
+  lastSync: MOCK_LAST_REFRESH_AT,
   masterPasscode: null,
   hasKeys: false,
 
@@ -158,13 +163,17 @@ export const useTokenStore = create<TokenStore>((set, get) => ({
     set({ hasKeys: hasConfigured });
 
     if (hasConfigured) {
-      void get().pollAllProviders();
+      void get().syncNow();
     }
   },
 
   clearApiKeys: () => {
     clearVault();
     set({ hasKeys: false });
+  },
+
+  syncNow: async () => {
+    await get().pollAllProviders();
   },
 
   pollAllProviders: async () => {
@@ -189,7 +198,13 @@ export const useTokenStore = create<TokenStore>((set, get) => ({
 
       try {
         const apiKey = await decryptApiKey(encryptedKey, passcode);
-        const telemetry = await pollProviderTelemetry(account.providerId, apiKey);
+        let telemetry;
+
+        if (account.providerId === 'openrouter') {
+          telemetry = await fetchOpenRouterTelemetry(apiKey);
+        } else {
+          telemetry = await pollProviderTelemetry(account.providerId, apiKey);
+        }
 
         updatedAccounts.push({
           ...account,
@@ -213,12 +228,17 @@ export const useTokenStore = create<TokenStore>((set, get) => ({
         new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
     );
 
+    const nowIso = new Date().toISOString();
+    const finalLogs =
+      aggregatedLogs.length > 0 ? aggregatedLogs : get().usageLogs;
+
     set({
       accounts: updatedAccounts.length > 0 ? updatedAccounts : get().accounts,
-      usageLogs:
-        aggregatedLogs.length > 0 ? aggregatedLogs : get().usageLogs,
+      usageLogs: finalLogs,
+      logs: finalLogs,
       isPolling: false,
-      lastRefreshAt: new Date().toISOString(),
+      lastRefreshAt: nowIso,
+      lastSync: nowIso,
     });
   },
 
