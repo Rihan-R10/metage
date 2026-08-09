@@ -7,6 +7,7 @@ import { DashboardHeader } from '@/components/dashboard/DashboardHeader';
 import { MetricCard } from '@/components/dashboard/MetricCard';
 import { ProviderHealth } from '@/components/dashboard/ProviderHealth';
 import { UsageTable } from '@/components/dashboard/UsageTable';
+import { DashboardCharts } from '@/components/dashboard/DashboardCharts';
 import { useTokenStore } from '@/store/useTokenStore';
 
 const containerVariants = {
@@ -45,10 +46,10 @@ export default function Home() {
   const pollAllProviders = useTokenStore((state) => state.pollAllProviders);
   const masterPasscode = useTokenStore((state) => state.masterPasscode);
   const getMetricsSummary = useTokenStore((state) => state.getMetricsSummary);
-  const metrics = getMetricsSummary();
+  const metrics = getMetricsSummary ? getMetricsSummary() : { todaySpend: 0, activeBurnRate: 0, projectedMonthlySpend: 0, totalTokens: 0 };
 
   useEffect(() => {
-    if (masterPasscode) {
+    if (masterPasscode && pollAllProviders) {
       void pollAllProviders();
     }
   }, [masterPasscode, pollAllProviders]);
@@ -106,6 +107,10 @@ export default function Home() {
             <MetricCard key={card.label} {...card} index={index} />
           ))}
         </motion.section>
+
+        <motion.div variants={sectionVariants}>
+          <DashboardCharts />
+        </motion.div>
 
         <motion.div variants={sectionVariants}>
           <ProviderHealth />

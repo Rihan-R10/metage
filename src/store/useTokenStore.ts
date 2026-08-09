@@ -1,10 +1,9 @@
 import { create } from 'zustand';
 import { fetchOpenRouterTelemetry, pollProviderTelemetry } from '@/lib/adapters';
+import { encryptApiKey, decryptApiKey } from '@/lib/cryptoVault';
 import {
-  decryptApiKey,
-  encryptApiKey,
-  getEncryptedKey,
   storeEncryptedKey,
+  getEncryptedKey,
   removeEncryptedKey,
   clearVault,
   hasAnyEncryptedKey,
@@ -34,6 +33,66 @@ export interface ApiKeysInput {
   openrouter?: string;
 }
 
+export interface TimelineDataPoint {
+  time: string;
+  gpt4o: number;
+  claudeSonnet: number;
+  openRouter: number;
+}
+
+export interface ModelSpendPoint {
+  name: string;
+  value: number;
+  color: string;
+}
+
+export interface ProviderHealthInfo {
+  name: string;
+  providerId: ProviderId;
+  status: 'healthy' | 'degraded' | 'offline' | 'NORMAL' | 'WARN' | 'EXHAUSTED';
+  latencyMs: number;
+  uptime: string;
+}
+
+export interface VaultStatusInfo {
+  isEncrypted: boolean;
+  algorithm: string;
+  keysConfiguredCount: number;
+}
+
+export interface KPIMetrics {
+  totalMonthlyCost: number;
+  costChangePercent: number;
+  totalTokens: number;
+  promptTokens: number;
+  completionTokens: number;
+  avgLatencyMs: number;
+  todaySpend: number;
+  activeBurnRate: number;
+  projectedMonthlySpend: number;
+}
+
+const MOCK_TIMELINE: TimelineDataPoint[] = [
+  { time: '00:00', gpt4o: 12000, claudeSonnet: 8500, openRouter: 4200 },
+  { time: '04:00', gpt4o: 8000, claudeSonnet: 5100, openRouter: 2100 },
+  { time: '08:00', gpt4o: 28000, claudeSonnet: 19400, openRouter: 9800 },
+  { time: '12:00', gpt4o: 45000, claudeSonnet: 32000, openRouter: 14500 },
+  { time: '16:00', gpt4o: 52000, claudeSonnet: 41000, openRouter: 18200 },
+  { time: '20:00', gpt4o: 31000, claudeSonnet: 22000, openRouter: 11000 },
+];
+
+const MOCK_SPEND: ModelSpendPoint[] = [
+  { name: 'GPT-4o (OpenAI)', value: 78.30, color: '#00f3ff' },
+  { name: 'Claude 3.5 Sonnet', value: 48.20, color: '#a855f7' },
+  { name: 'OpenRouter Models', value: 16.00, color: '#10b981' },
+];
+
+const MOCK_HEALTH: ProviderHealthInfo[] = [
+  { name: 'OpenAI', providerId: 'openai', status: 'healthy', latencyMs: 380, uptime: '99.98%' },
+  { name: 'Anthropic', providerId: 'anthropic', status: 'healthy', latencyMs: 440, uptime: '99.95%' },
+  { name: 'OpenRouter', providerId: 'openrouter', status: 'degraded', latencyMs: 820, uptime: '98.80%' },
+];
+
 interface TokenStore {
   accounts: ProviderAccount[];
   usageLogs: UsageLog[];
@@ -43,6 +102,15 @@ interface TokenStore {
   lastSync: string | null;
   masterPasscode: string | null;
   hasKeys: boolean;
+
+  isMockMode: boolean;
+  toggleMockMode: () => void;
+  timelineData: TimelineDataPoint[];
+  modelSpendData: ModelSpendPoint[];
+  providerHealth: ProviderHealthInfo[];
+
+  getVaultStatus: () => VaultStatusInfo;
+  getKPIMetrics: () => KPIMetrics;
   setMasterPasscode: (passcode: string | null) => void;
   pollAllProviders: () => Promise<void>;
   syncNow: () => Promise<void>;
@@ -53,43 +121,33 @@ interface TokenStore {
 }
 
 function deriveStatus(rateLimit: RateLimitStatus | null): ProviderStatus {
-  if (!rateLimit) {
-    return 'WARN';
-  }
+  if (!rateLimit) return 'WARN';
 
   const ratios: number[] = [];
+  const checks = [
+    { remaining: rateLimit.requestsRemaining, limit: rateLimit.requestsLimit },
+    { remaining: rateLimit.tokensRemaining, limit: rateLimit.tokensLimit },
+    { remaining: rateLimit.creditsRemaining, limit: rateLimit.creditsLimit },
+  ];
 
-  for (const { remaining, limit } of [
-    {
-      remaining: rateLimit.requestsRemaining,
-      limit: rateLimit.requestsLimit,
-    },
-    {
-      remaining: rateLimit.tokensRemaining,
-      limit: rateLimit.tokensLimit,
-    },
-    {
-      remaining: rateLimit.creditsRemaining,
-      limit: rateLimit.creditsLimit,
-    },
-  ]) {
-    if (remaining === null || limit === null || limit <= 0) {
+  for (const { remaining, limit } of checks) {
+    if (
+      remaining === undefined ||
+      remaining === null ||
+      limit === undefined ||
+      limit === null ||
+      limit <= 0
+    ) {
       continue;
     }
     ratios.push(remaining / limit);
   }
 
-  if (ratios.length === 0) {
-    return 'NORMAL';
-  }
+  if (ratios.length === 0) return 'NORMAL';
 
   const lowest = Math.min(...ratios);
-  if (lowest <= 0.05) {
-    return 'EXHAUSTED';
-  }
-  if (lowest <= 0.25) {
-    return 'WARN';
-  }
+  if (lowest <= 0.05) return 'EXHAUSTED';
+  if (lowest <= 0.25) return 'WARN';
   return 'NORMAL';
 }
 
@@ -111,6 +169,26 @@ export const useTokenStore = create<TokenStore>((set, get) => ({
   masterPasscode: null,
   hasKeys: false,
 
+  isMockMode: true,
+  timelineData: MOCK_TIMELINE,
+  modelSpendData: MOCK_SPEND,
+  providerHealth: MOCK_HEALTH,
+
+  toggleMockMode: () => set((state) => ({ isMockMode: !state.isMockMode })),
+
+  getVaultStatus: () => {
+    let configuredCount = 0;
+    if (getEncryptedKey('openai')) configuredCount++;
+    if (getEncryptedKey('anthropic')) configuredCount++;
+    if (getEncryptedKey('openrouter')) configuredCount++;
+
+    return {
+      isEncrypted: true,
+      algorithm: 'AES-256-GCM',
+      keysConfiguredCount: configuredCount > 0 ? configuredCount : (get().isMockMode ? 3 : 0),
+    };
+  },
+
   setMasterPasscode: (passcode) => set({ masterPasscode: passcode }),
 
   checkKeysStatus: () => {
@@ -130,10 +208,8 @@ export const useTokenStore = create<TokenStore>((set, get) => ({
       if (keys.openai.trim()) {
         const enc = await encryptApiKey(keys.openai.trim(), passcode);
         storeEncryptedKey('openai', enc);
-        storeEncryptedKey('openai-prod', enc);
       } else {
         removeEncryptedKey('openai');
-        removeEncryptedKey('openai-prod');
       }
     }
 
@@ -141,10 +217,8 @@ export const useTokenStore = create<TokenStore>((set, get) => ({
       if (keys.anthropic.trim()) {
         const enc = await encryptApiKey(keys.anthropic.trim(), passcode);
         storeEncryptedKey('anthropic', enc);
-        storeEncryptedKey('anthropic-prod', enc);
       } else {
         removeEncryptedKey('anthropic');
-        removeEncryptedKey('anthropic-prod');
       }
     }
 
@@ -152,15 +226,13 @@ export const useTokenStore = create<TokenStore>((set, get) => ({
       if (keys.openrouter.trim()) {
         const enc = await encryptApiKey(keys.openrouter.trim(), passcode);
         storeEncryptedKey('openrouter', enc);
-        storeEncryptedKey('openrouter-prod', enc);
       } else {
         removeEncryptedKey('openrouter');
-        removeEncryptedKey('openrouter-prod');
       }
     }
 
     const hasConfigured = hasAnyEncryptedKey();
-    set({ hasKeys: hasConfigured });
+    set({ hasKeys: hasConfigured, isMockMode: false });
 
     if (hasConfigured) {
       void get().syncNow();
@@ -243,7 +315,17 @@ export const useTokenStore = create<TokenStore>((set, get) => ({
   },
 
   getMetricsSummary: () => {
-    const { usageLogs } = get();
+    const { usageLogs, isMockMode } = get();
+
+    if (isMockMode) {
+      return {
+        todaySpend: 14.25,
+        activeBurnRate: 0.59,
+        projectedMonthlySpend: 142.50,
+        totalTokens: 4200000,
+      };
+    }
+
     const now = new Date(MOCK_REFERENCE_NOW);
     const last24Hours = new Date(now.getTime() - 24 * 60 * 60 * 1000);
 
@@ -271,6 +353,23 @@ export const useTokenStore = create<TokenStore>((set, get) => ({
       activeBurnRate,
       projectedMonthlySpend,
       totalTokens,
+    };
+  },
+
+  getKPIMetrics: () => {
+    const summary = get().getMetricsSummary();
+    const { isMockMode } = get();
+
+    return {
+      totalMonthlyCost: isMockMode ? 142.50 : (summary.projectedMonthlySpend || 0),
+      costChangePercent: 12,
+      totalTokens: isMockMode ? 4200000 : summary.totalTokens,
+      promptTokens: isMockMode ? 3100000 : Math.round(summary.totalTokens * 0.74),
+      completionTokens: isMockMode ? 1100000 : Math.round(summary.totalTokens * 0.26),
+      avgLatencyMs: 420,
+      todaySpend: summary.todaySpend,
+      activeBurnRate: summary.activeBurnRate,
+      projectedMonthlySpend: summary.projectedMonthlySpend,
     };
   },
 }));

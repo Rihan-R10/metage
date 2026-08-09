@@ -1,3 +1,3 @@
 'use client';
 
-export { Header as DashboardHeader } from '@/components/dashboard/Header';
+export { Header as DashboardHeader } from './Header';
