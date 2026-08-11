@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { validateApiKey } from '@/lib/validation';
 import { fetchOpenRouterTelemetry, pollProviderTelemetry } from '@/lib/adapters';
 import { encryptApiKey, decryptApiKey } from '@/lib/cryptoVault';
 import {
@@ -115,7 +116,7 @@ interface TokenStore {
   pollAllProviders: () => Promise<void>;
   syncNow: () => Promise<void>;
   getMetricsSummary: () => MetricsSummary;
-  saveApiKeys: (keys: ApiKeysInput) => Promise<void>;
+  saveApiKeys: (keys: ApiKeysInput) => Promise<{ success: boolean; error?: string }>;
   clearApiKeys: () => void;
   checkKeysStatus: () => boolean;
 }
@@ -204,38 +205,39 @@ export const useTokenStore = create<TokenStore>((set, get) => ({
       set({ masterPasscode: passcode });
     }
 
-    if (keys.openai !== undefined) {
-      if (keys.openai.trim()) {
-        const enc = await encryptApiKey(keys.openai.trim(), passcode);
-        storeEncryptedKey('openai', enc);
-      } else {
-        removeEncryptedKey('openai');
+    const processKey = async (providerId: string, rawKey: string | undefined) => {
+      if (rawKey === undefined) return;
+
+      if (!rawKey.trim()) {
+        removeEncryptedKey(providerId as any);
+        return;
       }
-    }
 
-    if (keys.anthropic !== undefined) {
-      if (keys.anthropic.trim()) {
-        const enc = await encryptApiKey(keys.anthropic.trim(), passcode);
-        storeEncryptedKey('anthropic', enc);
-      } else {
-        removeEncryptedKey('anthropic');
+      const validation = validateApiKey(providerId, rawKey);
+      if (!validation.isValid) {
+        throw new Error(`[${providerId}] ${validation.error}`);
       }
-    }
 
-    if (keys.openrouter !== undefined) {
-      if (keys.openrouter.trim()) {
-        const enc = await encryptApiKey(keys.openrouter.trim(), passcode);
-        storeEncryptedKey('openrouter', enc);
-      } else {
-        removeEncryptedKey('openrouter');
+      const enc = await encryptApiKey(validation.sanitizedKey, passcode);
+      storeEncryptedKey(providerId as any, enc);
+    };
+
+    try {
+      await processKey('openai', keys.openai);
+      await processKey('anthropic', keys.anthropic);
+      await processKey('openrouter', keys.openrouter);
+
+      const hasConfigured = hasAnyEncryptedKey();
+      set({ hasKeys: hasConfigured, isMockMode: false });
+
+      if (hasConfigured) {
+        void get().syncNow();
       }
-    }
-
-    const hasConfigured = hasAnyEncryptedKey();
-    set({ hasKeys: hasConfigured, isMockMode: false });
-
-    if (hasConfigured) {
-      void get().syncNow();
+      return { success: true };
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Validation failed';
+      console.error('Validation or Encryption failed:', errorMessage);
+      return { success: false, error: errorMessage };
     }
   },
 
@@ -253,65 +255,68 @@ export const useTokenStore = create<TokenStore>((set, get) => ({
     const passcode = masterPasscode ?? 'tokendash-vault-passcode';
     set({ isPolling: true });
 
-    const updatedAccounts: ProviderAccount[] = [];
-    const aggregatedLogs: UsageLog[] = [];
+    try {
+      const updatedAccounts: ProviderAccount[] = [];
+      const aggregatedLogs: UsageLog[] = [];
 
-    for (const account of accounts) {
-      const encryptedKey =
-        getEncryptedKey(account.id) ?? getEncryptedKey(account.providerId);
-      if (!encryptedKey) {
-        updatedAccounts.push({
-          ...account,
-          status: account.status,
-          errorMessage: 'No encrypted API key configured.',
-        });
-        continue;
-      }
-
-      try {
-        const apiKey = await decryptApiKey(encryptedKey, passcode);
-        let telemetry;
-
-        if (account.providerId === 'openrouter') {
-          telemetry = await fetchOpenRouterTelemetry(apiKey);
-        } else {
-          telemetry = await pollProviderTelemetry(account.providerId, apiKey);
+      for (const account of accounts) {
+        const encryptedKey =
+          getEncryptedKey(account.id) ?? getEncryptedKey(account.providerId);
+        if (!encryptedKey) {
+          updatedAccounts.push({
+            ...account,
+            status: account.status,
+            errorMessage: 'No encrypted API key configured.',
+          });
+          continue;
         }
 
-        updatedAccounts.push({
-          ...account,
-          rateLimit: telemetry.rateLimit,
-          status: deriveStatus(telemetry.rateLimit),
-          errorMessage: undefined,
-        });
-        aggregatedLogs.push(...telemetry.latestLogs);
-      } catch (error) {
-        updatedAccounts.push({
-          ...account,
-          status: 'EXHAUSTED',
-          errorMessage:
-            error instanceof Error ? error.message : 'Telemetry poll failed.',
-        });
+        try {
+          const apiKey = await decryptApiKey(encryptedKey, passcode);
+          let telemetry;
+
+          if (account.providerId === 'openrouter') {
+            telemetry = await fetchOpenRouterTelemetry(apiKey);
+          } else {
+            telemetry = await pollProviderTelemetry(account.providerId, apiKey);
+          }
+
+          updatedAccounts.push({
+            ...account,
+            rateLimit: telemetry.rateLimit,
+            status: deriveStatus(telemetry.rateLimit),
+            errorMessage: undefined,
+          });
+          aggregatedLogs.push(...telemetry.latestLogs);
+        } catch (error) {
+          updatedAccounts.push({
+            ...account,
+            status: 'EXHAUSTED',
+            errorMessage:
+              error instanceof Error ? error.message : 'Telemetry poll failed.',
+          });
+        }
       }
+
+      aggregatedLogs.sort(
+        (a, b) =>
+          new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+      );
+
+      const nowIso = new Date().toISOString();
+      const finalLogs =
+        aggregatedLogs.length > 0 ? aggregatedLogs : get().usageLogs;
+
+      set({
+        accounts: updatedAccounts.length > 0 ? updatedAccounts : get().accounts,
+        usageLogs: finalLogs,
+        logs: finalLogs,
+        lastRefreshAt: nowIso,
+        lastSync: nowIso,
+      });
+    } finally {
+      set({ isPolling: false });
     }
-
-    aggregatedLogs.sort(
-      (a, b) =>
-        new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
-    );
-
-    const nowIso = new Date().toISOString();
-    const finalLogs =
-      aggregatedLogs.length > 0 ? aggregatedLogs : get().usageLogs;
-
-    set({
-      accounts: updatedAccounts.length > 0 ? updatedAccounts : get().accounts,
-      usageLogs: finalLogs,
-      logs: finalLogs,
-      isPolling: false,
-      lastRefreshAt: nowIso,
-      lastSync: nowIso,
-    });
   },
 
   getMetricsSummary: () => {

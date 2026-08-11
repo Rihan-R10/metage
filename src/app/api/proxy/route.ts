@@ -120,6 +120,7 @@ export async function POST(request: NextRequest) {
           ? JSON.stringify(payload.body)
           : undefined,
       cache: 'no-store',
+      signal: AbortSignal.timeout(8000), // <--- Fails fast in 8 seconds instead of hanging!
     });
 
     const responseText = await providerResponse.text();
