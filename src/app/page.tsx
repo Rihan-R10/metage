@@ -1,28 +1,14 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect } from 'react';
 import { motion, type Variants } from 'framer-motion';
-import {
-  DollarSign,
-  Flame,
-  LineChart,
-  Zap,
-  Settings,
-  CheckCircle2,
-  AlertCircle,
-  ShieldCheck,
-  Key,
-  Trash2,
-  Sparkles,
-  AlertTriangle,
-  X,
-} from 'lucide-react';
+import { DollarSign, Flame, LineChart, Zap } from 'lucide-react';
 import { DashboardHeader } from '@/components/dashboard/DashboardHeader';
 import { MetricCard } from '@/components/dashboard/MetricCard';
 import { ProviderHealth } from '@/components/dashboard/ProviderHealth';
 import { UsageTable } from '@/components/dashboard/UsageTable';
-import { DashboardCharts } from '@/components/dashboard/DashboardCharts';
 import { useTokenStore } from '@/store/useTokenStore';
+import { useHasMounted } from '@/hooks/useHasMounted';
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -57,113 +43,25 @@ function formatTokens(value: number): string {
 }
 
 export default function Home() {
-  const [mounted, setMounted] = useState(false);
-
-  // Atomic Zustand Selectors (Prevents re-renders on unrelated store changes)
+  const hasMounted = useHasMounted();
   const pollAllProviders = useTokenStore((state) => state.pollAllProviders);
   const masterPasscode = useTokenStore((state) => state.masterPasscode);
   const getMetricsSummary = useTokenStore((state) => state.getMetricsSummary);
-  const isMockMode = useTokenStore((state) => state.isMockMode);
-  const toggleMockMode = useTokenStore((state) => state.toggleMockMode);
-  const getVaultStatus = useTokenStore((state) => state.getVaultStatus);
-  const saveApiKeys = useTokenStore((state) => state.saveApiKeys);
-  const setMasterPasscode = useTokenStore((state) => state.setMasterPasscode);
-  const clearApiKeys = useTokenStore((state) => state.clearApiKeys);
 
-  // Modal State
-  const [isOpen, setIsOpen] = useState(false);
-  const [openaiKey, setOpenaiKey] = useState('');
-  const [anthropicKey, setAnthropicKey] = useState('');
-  const [openrouterKey, setOpenrouterKey] = useState('');
-  const [grokKey, setGrokKey] = useState('');
-  const [passcode, setPasscode] = useState('');
-  const [monthlyBudget, setMonthlyBudget] = useState<number>(150);
-  const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  useEffect(() => {
-    if (mounted && masterPasscode && pollAllProviders) {
-      void pollAllProviders();
-    }
-  }, [mounted, masterPasscode, pollAllProviders]);
-
-  // Handle Escape key to close modal
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') handleCloseModal();
-    };
-    if (isOpen) {
-      window.addEventListener('keydown', handleKeyDown);
-    }
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen]);
-
-  const resetModalFields = useCallback(() => {
-    setOpenaiKey('');
-    setAnthropicKey('');
-    setOpenrouterKey('');
-    setGrokKey('');
-    setPasscode('');
-    setFeedback(null);
-  }, []);
-
-  const handleCloseModal = () => {
-    setIsOpen(false);
-    resetModalFields();
-  };
-
-  // Safe SSR metric computation
-  const metrics = mounted && getMetricsSummary
-    ? getMetricsSummary()
+  // Only read store-derived metrics on the client after mount.
+  // On SSR (and the matching first client render) we use zero-values so
+  // the hydration checksums agree. The real values populate instantly
+  // after the first paint via useHasMounted.
+  const rawMetrics = getMetricsSummary();
+  const metrics = hasMounted
+    ? rawMetrics
     : { todaySpend: 0, activeBurnRate: 0, projectedMonthlySpend: 0, totalTokens: 0 };
 
-  const vaultStatus = mounted && getVaultStatus
-    ? getVaultStatus()
-    : { isEncrypted: true, algorithm: 'AES-256-GCM', keysConfiguredCount: 0 };
-
-  // Safe division check for budget percentage
-  const safeBudget = monthlyBudget > 0 ? monthlyBudget : 1;
-  const budgetUsagePercent = Math.min(
-    100,
-    Math.max(0, Math.round((metrics.projectedMonthlySpend / safeBudget) * 100))
-  );
-
-  const handleSave = async () => {
-    setFeedback(null);
-    if (passcode) {
-      setMasterPasscode(passcode);
+  useEffect(() => {
+    if (masterPasscode) {
+      void pollAllProviders();
     }
-
-    const result = await saveApiKeys({
-      openai: openaiKey || undefined,
-      anthropic: anthropicKey || undefined,
-      openrouter: openrouterKey || undefined,
-      grok: grokKey || undefined,
-    });
-
-    if (result && !result.success) {
-      setFeedback({ type: 'error', text: result.error || 'Invalid key format.' });
-    } else {
-      setFeedback({
-        type: 'success',
-        text: 'API Keys validated and encrypted into local AES-256 vault!',
-      });
-      setTimeout(() => {
-        handleCloseModal();
-      }, 1500);
-    }
-  };
-
-  const handleClearVault = () => {
-    clearApiKeys();
-    setFeedback({ type: 'success', text: 'Encrypted vault keys cleared.' });
-    setTimeout(() => {
-      setFeedback(null);
-    }, 1500);
-  };
+  }, [masterPasscode, pollAllProviders]);
 
   const metricCards = [
     {
@@ -201,103 +99,15 @@ export default function Home() {
   ];
 
   return (
-    <div className="min-h-screen bg-[#09090b] text-zinc-100 relative">
+    <div className="min-h-screen bg-[#09090b] text-zinc-100">
       <DashboardHeader />
 
-      {/* Top Action Bar */}
-      <div className="max-w-7xl mx-auto px-6 pt-4 flex flex-wrap items-center justify-between gap-4 border-b border-zinc-800/60 pb-4">
-        <div className="flex items-center gap-3">
-          <span className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-mono">
-            <ShieldCheck className="w-3.5 h-3.5" /> AES-256 Secured Vault
-          </span>
-          <span className="px-2.5 py-1 rounded-full bg-zinc-800 text-zinc-400 text-xs font-mono">
-            Keys Configured: {vaultStatus.keysConfiguredCount}
-          </span>
-        </div>
-
-        <div className="flex items-center gap-3">
-          {/* Toggle Mock / Live Mode */}
-          <button
-            type="button"
-            onClick={toggleMockMode}
-            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium border transition ${
-              isMockMode
-                ? 'bg-amber-500/10 border-amber-500/30 text-amber-400 hover:bg-amber-500/20'
-                : 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/20'
-            }`}
-          >
-            <Sparkles className="w-3.5 h-3.5" />
-            Mode: {isMockMode ? 'Mock Data' : 'Live Vault'}
-          </button>
-
-          {/* Modal Opener */}
-          <button
-            type="button"
-            onClick={() => {
-              setFeedback(null);
-              setIsOpen(true);
-            }}
-            className="flex items-center gap-2 bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/30 text-cyan-400 px-4 py-1.5 rounded-lg text-xs font-medium transition"
-          >
-            <Settings className="w-3.5 h-3.5" /> Vault Settings & Keys
-          </button>
-        </div>
-      </div>
-
       <motion.main
-        className="mx-auto max-w-7xl space-y-8 px-6 py-6"
+        className="mx-auto max-w-7xl space-y-8 px-6 py-8"
         variants={containerVariants}
         initial="hidden"
         animate="visible"
       >
-        {/* Budget Spend Cap Bar */}
-        <motion.section
-          variants={sectionVariants}
-          className="bg-zinc-900/60 border border-zinc-800/80 rounded-xl p-4 shadow-lg flex flex-col md:flex-row items-start md:items-center justify-between gap-4"
-        >
-          <div className="space-y-1">
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-semibold text-zinc-200">Monthly Budget Cap</span>
-              {budgetUsagePercent >= 90 && (
-                <span className="flex items-center gap-1 text-xs text-red-400 bg-red-500/10 px-2 py-0.5 rounded border border-red-500/20">
-                  <AlertTriangle className="w-3 h-3" /> Near Threshold
-                </span>
-              )}
-            </div>
-            <p className="text-xs text-zinc-400">
-              Projected spend is{' '}
-              <span className="text-zinc-200 font-mono font-medium">
-                {formatCurrency(metrics.projectedMonthlySpend)}
-              </span>{' '}
-              of your{' '}
-              <span className="text-zinc-200 font-mono font-medium">
-                {formatCurrency(monthlyBudget)}
-              </span>{' '}
-              monthly limit.
-            </p>
-          </div>
-
-          <div className="w-full md:w-72 space-y-1.5">
-            <div className="flex justify-between text-xs font-mono">
-              <span className="text-zinc-400">{budgetUsagePercent}% spent</span>
-              <span className="text-zinc-400">{formatCurrency(monthlyBudget)}</span>
-            </div>
-            <div className="w-full bg-zinc-800 rounded-full h-2.5 overflow-hidden">
-              <div
-                className={`h-full rounded-full transition-all duration-500 ${
-                  budgetUsagePercent >= 90
-                    ? 'bg-red-500'
-                    : budgetUsagePercent >= 75
-                    ? 'bg-amber-500'
-                    : 'bg-cyan-500'
-                }`}
-                style={{ width: `${budgetUsagePercent}%` }}
-              />
-            </div>
-          </div>
-        </motion.section>
-
-        {/* Top KPI Cards */}
         <motion.section
           variants={sectionVariants}
           className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4"
@@ -307,179 +117,14 @@ export default function Home() {
           ))}
         </motion.section>
 
-        {/* Telemetry Charts */}
-        <motion.div variants={sectionVariants}>
-          <DashboardCharts />
-        </motion.div>
-
-        {/* Provider Health */}
         <motion.div variants={sectionVariants}>
           <ProviderHealth />
         </motion.div>
 
-        {/* Usage Logs Table */}
         <motion.div variants={sectionVariants}>
           <UsageTable />
         </motion.div>
       </motion.main>
-
-      {/* Settings & Vault Key Modal */}
-      {isOpen && (
-        <div
-          className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50 backdrop-blur-md"
-          onClick={(e) => {
-            if (e.target === e.currentTarget) handleCloseModal();
-          }}
-        >
-          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 w-full max-w-lg space-y-5 shadow-2xl">
-            <div className="flex items-center justify-between border-b border-zinc-800 pb-3">
-              <div className="flex items-center gap-2">
-                <Key className="w-5 h-5 text-cyan-400" />
-                <h2 className="text-lg font-bold text-white">Configure Vault API Keys</h2>
-              </div>
-              <button
-                type="button"
-                onClick={handleCloseModal}
-                className="text-zinc-400 hover:text-white p-1 transition"
-                aria-label="Close modal"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            {/* Feedback Banner */}
-            {feedback && (
-              <div
-                className={`p-3 rounded-lg text-xs flex items-start gap-2.5 border ${
-                  feedback.type === 'success'
-                    ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
-                    : 'bg-red-500/10 border-red-500/30 text-red-400'
-                }`}
-              >
-                {feedback.type === 'success' ? (
-                  <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5" />
-                ) : (
-                  <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
-                )}
-                <span>{feedback.text}</span>
-              </div>
-            )}
-
-            <div className="space-y-3.5 max-h-[60vh] overflow-y-auto pr-1">
-              <div>
-                <label htmlFor="master-passcode" className="block text-xs font-medium text-zinc-300 mb-1">
-                  Master Vault Passcode
-                </label>
-                <input
-                  id="master-passcode"
-                  type="password"
-                  placeholder="Optional encryption passcode"
-                  value={passcode}
-                  onChange={(e) => setPasscode(e.target.value)}
-                  className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-white text-xs focus:outline-none focus:border-cyan-500"
-                />
-              </div>
-
-              <div>
-                <label htmlFor="openai-key" className="block text-xs font-medium text-zinc-300 mb-1">
-                  OpenAI API Key
-                </label>
-                <input
-                  id="openai-key"
-                  type="password"
-                  placeholder="sk-..."
-                  value={openaiKey}
-                  onChange={(e) => setOpenaiKey(e.target.value)}
-                  className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-white font-mono text-xs focus:outline-none focus:border-cyan-500"
-                />
-              </div>
-
-              <div>
-                <label htmlFor="anthropic-key" className="block text-xs font-medium text-zinc-300 mb-1">
-                  Anthropic API Key
-                </label>
-                <input
-                  id="anthropic-key"
-                  type="password"
-                  placeholder="sk-ant-..."
-                  value={anthropicKey}
-                  onChange={(e) => setAnthropicKey(e.target.value)}
-                  className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-white font-mono text-xs focus:outline-none focus:border-cyan-500"
-                />
-              </div>
-
-              <div>
-                <label htmlFor="openrouter-key" className="block text-xs font-medium text-zinc-300 mb-1">
-                  OpenRouter API Key
-                </label>
-                <input
-                  id="openrouter-key"
-                  type="password"
-                  placeholder="sk-or-..."
-                  value={openrouterKey}
-                  onChange={(e) => setOpenrouterKey(e.target.value)}
-                  className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-white font-mono text-xs focus:outline-none focus:border-cyan-500"
-                />
-              </div>
-
-              <div>
-                <label htmlFor="grok-key" className="block text-xs font-medium text-zinc-300 mb-1">
-                  Grok (xAI) API Key
-                </label>
-                <input
-                  id="grok-key"
-                  type="password"
-                  placeholder="xai-..."
-                  value={grokKey}
-                  onChange={(e) => setGrokKey(e.target.value)}
-                  className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-white font-mono text-xs focus:outline-none focus:border-cyan-500"
-                />
-              </div>
-
-              <div>
-                <label htmlFor="monthly-budget" className="block text-xs font-medium text-zinc-300 mb-1">
-                  Monthly Budget Cap ($ USD)
-                </label>
-                <input
-                  id="monthly-budget"
-                  type="number"
-                  min="1"
-                  value={monthlyBudget}
-                  onChange={(e) => setMonthlyBudget(Number(e.target.value) || 0)}
-                  className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-white font-mono text-xs focus:outline-none focus:border-cyan-500"
-                />
-              </div>
-            </div>
-
-            <div className="flex items-center justify-between pt-2 border-t border-zinc-800">
-              <button
-                type="button"
-                onClick={handleClearVault}
-                className="flex items-center gap-1.5 text-xs text-red-400 hover:text-red-300 transition"
-              >
-                <Trash2 className="w-3.5 h-3.5" /> Clear Vault
-              </button>
-
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={handleCloseModal}
-                  className="px-3.5 py-1.5 rounded-lg bg-zinc-800 text-zinc-300 hover:bg-zinc-700 text-xs font-medium transition"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  onClick={handleSave}
-                  className="px-4 py-1.5 rounded-lg bg-cyan-500 text-zinc-950 font-semibold hover:bg-cyan-400 text-xs transition"
-                >
-                  Save & Validate
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

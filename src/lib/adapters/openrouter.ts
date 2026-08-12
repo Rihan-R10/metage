@@ -1,13 +1,6 @@
-import type { ProviderStatus, ProviderTelemetry, UsageLog } from '@/types';
+import type { ProviderTelemetry, UsageLog } from '@/types';
 import { proxyFetch } from '@/lib/adapters/proxy';
-import { createRateLimitStatus } from '@/lib/adapters/utils';
-
-interface OpenRouterCreditsResponse {
-  data?: {
-    total_credits?: number;
-    total_usage?: number;
-  };
-}
+import { createRateLimitStatus, readErrorMessage } from '@/lib/adapters/utils';
 
 interface OpenRouterKeyResponse {
   data?: {
@@ -16,123 +9,47 @@ interface OpenRouterKeyResponse {
     limit_remaining?: number | null;
     limit_reset?: string | null;
     usage?: number;
-    is_free_tier?: boolean;
+    usage_daily?: number;
+    usage_weekly?: number;
+    usage_monthly?: number;
   };
 }
 
-export interface OpenRouterTelemetryResult extends ProviderTelemetry {
-  totalSpend: number;
-  status: ProviderStatus;
-}
-
-export async function fetchOpenRouterTelemetry(
-  apiKey: string
-): Promise<OpenRouterTelemetryResult> {
-  const [creditsRes, keyRes] = await Promise.allSettled([
-    proxyFetch({
-      providerId: 'openrouter',
-      apiKey,
-      endpoint: '/credits',
-    }),
-    proxyFetch({
-      providerId: 'openrouter',
-      apiKey,
-      endpoint: '/auth/key',
-    }),
-  ]);
-
-  let totalCredits: number | null = null;
-  let creditsUsage = 0;
-
-  if (creditsRes.status === 'fulfilled' && creditsRes.value.ok) {
-    try {
-      const creditsPayload = await creditsRes.value.json<OpenRouterCreditsResponse>();
-      if (creditsPayload?.data) {
-        totalCredits = creditsPayload.data.total_credits ?? null;
-        creditsUsage = creditsPayload.data.total_usage ?? 0;
-      }
-    } catch {
-      // Ignore JSON parse errors
-    }
-  }
-
-  let limit: number | null = null;
-  let limitRemaining: number | null = null;
-  let resetAt: string | null = null;
-  let keyUsage = 0;
-
-  if (keyRes.status === 'fulfilled' && keyRes.value.ok) {
-    try {
-      const keyPayload = await keyRes.value.json<OpenRouterKeyResponse>();
-      if (keyPayload?.data) {
-        limit = keyPayload.data.limit ?? null;
-        limitRemaining = keyPayload.data.limit_remaining ?? null;
-        resetAt = keyPayload.data.limit_reset ?? null;
-        keyUsage = keyPayload.data.usage ?? 0;
-      }
-    } catch {
-      // Ignore JSON parse errors
-    }
-  } else {
-    try {
-      const fallbackKeyRes = await proxyFetch({
-        providerId: 'openrouter',
-        apiKey,
-        endpoint: '/key',
-      });
-      if (fallbackKeyRes.ok) {
-        const keyPayload = await fallbackKeyRes.json<OpenRouterKeyResponse>();
-        if (keyPayload?.data) {
-          limit = keyPayload.data.limit ?? null;
-          limitRemaining = keyPayload.data.limit_remaining ?? null;
-          resetAt = keyPayload.data.limit_reset ?? null;
-          keyUsage = keyPayload.data.usage ?? 0;
-        }
-      }
-    } catch {
-      // Ignore fallback errors
-    }
-  }
-
-  const totalSpend = Math.max(creditsUsage, keyUsage);
-
-  const rateLimit = createRateLimitStatus({
-    creditsRemaining:
-      limitRemaining ?? (totalCredits !== null ? totalCredits - totalSpend : null),
-    creditsLimit: limit ?? totalCredits,
-    resetAt,
+export async function pollOpenRouter(apiKey: string): Promise<ProviderTelemetry> {
+  const response = await proxyFetch({
+    providerId: 'openrouter',
+    apiKey,
+    endpoint: '/key',
   });
 
-  let status: ProviderStatus = 'NORMAL';
-  if (
-    rateLimit.creditsRemaining !== null &&
-    rateLimit.creditsLimit !== null &&
-    rateLimit.creditsLimit > 0
-  ) {
-    const ratio = rateLimit.creditsRemaining / rateLimit.creditsLimit;
-    if (ratio <= 0.05) status = 'EXHAUSTED';
-    else if (ratio <= 0.25) status = 'WARN';
+  if (!response.ok) {
+    const message = await readErrorMessage(response);
+    throw new Error(
+      `OpenRouter telemetry failed (${response.status}): ${message}`
+    );
   }
 
-  const latestLogs: UsageLog[] = [
-    {
-      id: `openrouter-${Date.now()}`,
-      providerId: 'openrouter',
-      timestamp: new Date().toISOString(),
-      cost: totalSpend,
-    },
-  ];
+  const payload = await response.json<OpenRouterKeyResponse>();
+  const data = payload.data;
+
+  const latestLogs: UsageLog[] = data
+    ? [
+        {
+          id: `openrouter-${Date.now()}`,
+          providerId: 'openrouter',
+          timestamp: new Date().toISOString(),
+          cost: data.usage,
+          requests: undefined,
+        },
+      ]
+    : [];
 
   return {
-    rateLimit,
+    rateLimit: createRateLimitStatus({
+      creditsRemaining: data?.limit_remaining ?? null,
+      creditsLimit: data?.limit ?? null,
+      resetAt: data?.limit_reset ?? null,
+    }),
     latestLogs,
-    totalSpend,
-    status,
   };
-}
-
-export async function pollOpenRouter(
-  apiKey: string
-): Promise<ProviderTelemetry> {
-  return fetchOpenRouterTelemetry(apiKey);
 }

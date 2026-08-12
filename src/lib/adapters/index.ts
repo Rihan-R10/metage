@@ -1,6 +1,6 @@
 import { pollAnthropic } from '@/lib/adapters/anthropic';
 import { pollOpenAI } from '@/lib/adapters/openai';
-import { fetchOpenRouterTelemetry, pollOpenRouter } from '@/lib/adapters/openrouter';
+import { pollOpenRouter } from '@/lib/adapters/openrouter';
 import { proxyFetch } from '@/lib/adapters/proxy';
 import type { ProviderId, ProviderTelemetry } from '@/types';
 
@@ -9,7 +9,7 @@ const ADAPTERS: Partial<
 > = {
   openai: pollOpenAI,
   anthropic: pollAnthropic,
-  openrouter: fetchOpenRouterTelemetry,
+  openrouter: pollOpenRouter,
 };
 
 export async function pollProviderTelemetry(
@@ -26,6 +26,6 @@ export async function pollProviderTelemetry(
 
 export { pollOpenAI } from '@/lib/adapters/openai';
 export { pollAnthropic } from '@/lib/adapters/anthropic';
-export { fetchOpenRouterTelemetry, pollOpenRouter } from '@/lib/adapters/openrouter';
+export { pollOpenRouter } from '@/lib/adapters/openrouter';
 export { proxyFetch } from '@/lib/adapters/proxy';
 export type { ProxyRequest, ProxyResponse } from '@/lib/adapters/proxy';

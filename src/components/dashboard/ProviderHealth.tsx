@@ -1,7 +1,6 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { useFormattedDate } from '@/hooks/useFormattedDate';
 import { useTokenStore } from '@/store/useTokenStore';
 import type { ProviderStatus } from '@/types';
 import { cn } from '@/lib/utils';
@@ -35,17 +34,6 @@ function formatMetric(value: number | null | undefined): string {
     return '—';
   }
   return new Intl.NumberFormat('en-US').format(value);
-}
-
-const POLLED_AT_OPTIONS: Intl.DateTimeFormatOptions = {
-  hour: 'numeric',
-  minute: '2-digit',
-};
-
-function PolledAtCell({ polledAt }: { polledAt: string | null | undefined }) {
-  const formatted = useFormattedDate(polledAt, POLLED_AT_OPTIONS);
-
-  return <span suppressHydrationWarning>{formatted}</span>;
 }
 
 function StatusDot({ status }: { status: ProviderStatus }) {
@@ -144,7 +132,12 @@ export function ProviderHealth() {
                 <div className="rounded-lg border border-slate-800 bg-[#09090b] px-3 py-2">
                   <dt className="text-xs text-zinc-600">Last Polled</dt>
                   <dd className="mt-1 font-medium text-zinc-200">
-                    <PolledAtCell polledAt={rateLimit?.polledAt} />
+                    {rateLimit?.polledAt
+                      ? new Intl.DateTimeFormat('en-US', {
+                          hour: 'numeric',
+                          minute: '2-digit',
+                        }).format(new Date(rateLimit.polledAt))
+                      : '—'}
                   </dd>
                 </div>
               </dl>

@@ -2,8 +2,6 @@
 
 import { useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { useFormattedDate } from '@/hooks/useFormattedDate';
-import { MOCK_REFERENCE_NOW } from '@/lib/mockData';
 import { useTokenStore } from '@/store/useTokenStore';
 import type { ProviderId, UsageLog } from '@/types';
 import { cn } from '@/lib/utils';
@@ -41,21 +39,8 @@ function formatCost(value: number | undefined): string {
   }).format(value);
 }
 
-const LOG_TIMESTAMP_OPTIONS: Intl.DateTimeFormatOptions = {
-  month: 'short',
-  day: 'numeric',
-  hour: 'numeric',
-  minute: '2-digit',
-};
-
-function TimestampCell({ timestamp }: { timestamp: string }) {
-  const formatted = useFormattedDate(timestamp, LOG_TIMESTAMP_OPTIONS);
-  return <span suppressHydrationWarning>{formatted}</span>;
-}
-
 function filterLogsByTimeframe(logs: UsageLog[], timeframe: Timeframe): UsageLog[] {
-  const referenceNow = new Date(MOCK_REFERENCE_NOW).getTime();
-  const cutoff = referenceNow - TIMEFRAME_HOURS[timeframe] * 60 * 60 * 1000;
+  const cutoff = Date.now() - TIMEFRAME_HOURS[timeframe] * 60 * 60 * 1000;
   return logs.filter((log) => new Date(log.timestamp).getTime() >= cutoff);
 }
 
@@ -149,8 +134,13 @@ export function UsageTable() {
                       transition={{ duration: 0.25, delay: index * 0.02 }}
                       className="transition hover:bg-slate-900/50"
                     >
-                      <td className="whitespace-nowrap px-4 py-3 text-sm text-zinc-300" suppressHydrationWarning>
-                        <TimestampCell timestamp={log.timestamp} />
+                      <td className="whitespace-nowrap px-4 py-3 text-sm text-zinc-300">
+                        {new Intl.DateTimeFormat('en-US', {
+                          month: 'short',
+                          day: 'numeric',
+                          hour: 'numeric',
+                          minute: '2-digit',
+                        }).format(new Date(log.timestamp))}
                       </td>
                       <td className="whitespace-nowrap px-4 py-3 text-sm">
                         <span className="rounded-md border border-slate-800 bg-[#09090b] px-2 py-1 text-xs font-medium text-emerald-400">
