@@ -236,7 +236,6 @@ export const useTokenStore = create<TokenStore>((set, get) => ({
       return { success: true };
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Validation failed';
-      console.error('Validation or Encryption failed:', errorMessage);
       return { success: false, error: errorMessage };
     }
   },
