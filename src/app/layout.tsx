@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { JetBrains_Mono } from "next/font/google";
 import { SpeedInsights } from "@vercel/speed-insights/next";
+import Footer from "@/components/dashboard/Footer";
 import "./globals.css";
 
 const jetbrainsMono = JetBrains_Mono({
@@ -21,7 +22,10 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${jetbrainsMono.variable} dark h-full antialiased`}>
       <body className={`${jetbrainsMono.className} min-h-full flex flex-col bg-[#090a0f] text-cyan-400 selection:bg-cyan-500/20 selection:text-cyan-200`}>
-        {children}
+        <main className="flex-1">
+          {children}
+        </main>
+        <Footer />
         <SpeedInsights />
       </body>
     </html>
