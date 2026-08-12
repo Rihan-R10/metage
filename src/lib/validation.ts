@@ -52,6 +52,17 @@ export function validateApiKey(providerId: string, rawKey: string): KeyValidatio
       }
       break;
 
+    case 'grok':
+    case 'xai':
+      if (!sanitizedKey.startsWith('xai-') && !sanitizedKey.startsWith('grok-')) {
+        return {
+          isValid: false,
+          sanitizedKey,
+          error: 'Grok (xAI) API keys typically start with "xai-" or "grok-".',
+        };
+      }
+      break;
+
     default:
       if (sanitizedKey.length < 8) {
         return {

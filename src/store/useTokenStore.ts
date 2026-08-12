@@ -32,6 +32,7 @@ export interface ApiKeysInput {
   openai?: string;
   anthropic?: string;
   openrouter?: string;
+  grok?: string;
 }
 
 export interface TimelineDataPoint {
@@ -86,6 +87,7 @@ const MOCK_SPEND: ModelSpendPoint[] = [
   { name: 'GPT-4o (OpenAI)', value: 78.30, color: '#00f3ff' },
   { name: 'Claude 3.5 Sonnet', value: 48.20, color: '#a855f7' },
   { name: 'OpenRouter Models', value: 16.00, color: '#10b981' },
+  { name: 'Grok 2 (xAI)', value: 12.40, color: '#f59e0b' },
 ];
 
 const MOCK_HEALTH: ProviderHealthInfo[] = [
@@ -182,11 +184,12 @@ export const useTokenStore = create<TokenStore>((set, get) => ({
     if (getEncryptedKey('openai')) configuredCount++;
     if (getEncryptedKey('anthropic')) configuredCount++;
     if (getEncryptedKey('openrouter')) configuredCount++;
+    if (getEncryptedKey('grok')) configuredCount++;
 
     return {
       isEncrypted: true,
       algorithm: 'AES-256-GCM',
-      keysConfiguredCount: configuredCount > 0 ? configuredCount : (get().isMockMode ? 3 : 0),
+      keysConfiguredCount: configuredCount > 0 ? configuredCount : (get().isMockMode ? 4 : 0),
     };
   },
 
@@ -226,6 +229,7 @@ export const useTokenStore = create<TokenStore>((set, get) => ({
       await processKey('openai', keys.openai);
       await processKey('anthropic', keys.anthropic);
       await processKey('openrouter', keys.openrouter);
+      await processKey('grok', keys.grok);
 
       const hasConfigured = hasAnyEncryptedKey();
       set({ hasKeys: hasConfigured, isMockMode: false });
