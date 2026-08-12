@@ -111,6 +111,10 @@ export async function POST(request: NextRequest) {
 
   const method = payload.method || 'GET';
 
+  // Backwards-compatible timeout signal across standard Serverless Runtimes
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 8000);
+
   try {
     const providerResponse = await fetch(targetUrl, {
       method,
@@ -120,8 +124,10 @@ export async function POST(request: NextRequest) {
           ? JSON.stringify(payload.body)
           : undefined,
       cache: 'no-store',
-      signal: AbortSignal.timeout(8000), // <--- Fails fast in 8 seconds instead of hanging!
+      signal: controller.signal,
     });
+
+    clearTimeout(timeoutId);
 
     const responseText = await providerResponse.text();
     let responseBody: unknown = responseText;
@@ -155,6 +161,7 @@ export async function POST(request: NextRequest) {
       }
     );
   } catch (error) {
+    clearTimeout(timeoutId);
     return NextResponse.json(
       {
         error: error instanceof Error ? error.message : 'Proxy fetch failed',

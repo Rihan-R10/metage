@@ -21,8 +21,8 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={`${jetbrainsMono.variable} dark h-full antialiased`}>
-      <body className={`${jetbrainsMono.className} min-h-full flex flex-col bg-[#090a0f] text-cyan-400 selection:bg-cyan-500/20 selection:text-cyan-200`}>
-        <main className="flex-1">
+      <body className={`${jetbrainsMono.className} min-h-full flex flex-col bg-[#090a0f] text-cyan-400 selection:bg-cyan-500/20 selection:text-cyan-200 w-full max-w-full overflow-x-hidden`}>
+        <main className="flex-1 w-full max-w-full overflow-x-hidden">
           {children}
         </main>
         <Footer />
