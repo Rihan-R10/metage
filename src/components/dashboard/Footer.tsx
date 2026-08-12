@@ -37,7 +37,7 @@ export default function Footer() {
                 GitHub
               </a>
               <a
-                href="https://x.com"
+                href="https://x.com/0xrihan1"
                 target="_blank"
                 rel="noreferrer"
                 className="flex items-center gap-1.5 transition-colors hover:text-cyan-200"
