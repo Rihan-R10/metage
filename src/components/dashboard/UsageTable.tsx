@@ -3,8 +3,21 @@
 import { useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useTokenStore } from '@/store/useTokenStore';
+import { useFormattedDate } from '@/hooks/useFormattedDate';
 import type { ProviderId, UsageLog } from '@/types';
 import { cn } from '@/lib/utils';
+
+const LOG_TIMESTAMP_OPTIONS: Intl.DateTimeFormatOptions = {
+  month: 'short',
+  day: 'numeric',
+  hour: 'numeric',
+  minute: '2-digit',
+};
+
+function FormattedLogTime({ timestamp }: { timestamp: string }) {
+  const formatted = useFormattedDate(timestamp, LOG_TIMESTAMP_OPTIONS, '—');
+  return <>{formatted}</>;
+}
 
 const PROVIDER_LABELS: Record<ProviderId, string> = {
   openai: 'OpenAI',
@@ -12,6 +25,7 @@ const PROVIDER_LABELS: Record<ProviderId, string> = {
   groq: 'Groq',
   openrouter: 'OpenRouter',
 };
+
 
 type Timeframe = '24h' | '7d' | '30d';
 
@@ -135,12 +149,7 @@ export function UsageTable() {
                       className="transition hover:bg-slate-900/50"
                     >
                       <td className="whitespace-nowrap px-4 py-3 text-sm text-zinc-300">
-                        {new Intl.DateTimeFormat('en-US', {
-                          month: 'short',
-                          day: 'numeric',
-                          hour: 'numeric',
-                          minute: '2-digit',
-                        }).format(new Date(log.timestamp))}
+                        <FormattedLogTime timestamp={log.timestamp} />
                       </td>
                       <td className="whitespace-nowrap px-4 py-3 text-sm">
                         <span className="rounded-md border border-slate-800 bg-[#09090b] px-2 py-1 text-xs font-medium text-emerald-400">
