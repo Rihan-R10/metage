@@ -13,6 +13,8 @@ import { validateApiKey } from '@/lib/validation';
 import type { ProviderId, RateLimitStatus, UsageLog, ProviderStatus } from '@/types';
 import { MOCK_ACCOUNTS, MOCK_USAGE_LOGS } from '@/lib/mockData';
 
+
+export type DateRange = '7d' | '30d' | '90d' | 'ytd';
 export interface ProviderAccount {
   id: string;
   providerId: ProviderId;
@@ -101,6 +103,10 @@ export interface TokenStore {
   saveApiKeys: (keys: ApiKeysInput) => Promise<{ success: boolean; error?: string }>;
   clearApiKeys: () => void;
   checkKeysStatus: () => boolean;
+
+  dateRange: DateRange;
+  setDateRange: (range: DateRange) => void;
+  getFilteredUsageLogs: () => UsageLog[];
 }
 
 export const MOCK_TIMELINE: TimelineDataPoint[] = [
@@ -189,9 +195,28 @@ export const useTokenStore = create<TokenStore>((set, get) => ({
   modelSpendData: MOCK_SPEND,
   providerHealth: MOCK_HEALTH,
 
+  dateRange: '30d',
+
   setMasterPasscode: (passcode) => set({ masterPasscode: passcode }),
   setMonthlyBudget: (budget) => set({ monthlyBudget: budget }),
   toggleMockMode: () => set((state) => ({ isMockMode: !state.isMockMode })),
+
+  setDateRange: (range) => set({ dateRange: range }),
+
+  getFilteredUsageLogs: () => {
+    const { usageLogs, dateRange } = get();
+    const now = new Date();
+    let cutoff: Date;
+
+    if (dateRange === 'ytd') {
+      cutoff = new Date(now.getFullYear(), 0, 1);
+    } else {
+      const days = dateRange === '7d' ? 7 : dateRange === '30d' ? 30 : 90;
+      cutoff = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
+    }
+
+    return usageLogs.filter((log) => new Date(log.timestamp) >= cutoff);
+  },
 
   getVaultStatus: () => {
     let configuredCount = 0;

@@ -20,6 +20,7 @@ import { DashboardCharts } from '@/components/dashboard/DashboardCharts';
 import { ApiKeyModal } from '@/components/dashboard/ApiKeyModal';
 import { useTokenStore } from '@/store/useTokenStore';
 import { useHasMounted } from '@/hooks/useHasMounted';
+import { ExportFilterBar } from '@/components/dashboard/ExportFilterBar';
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -239,6 +240,11 @@ export default function Home() {
             <MetricCard key={card.label} {...card} index={index} />
           ))}
         </motion.section>
+
+        {/* Date Range Filter & Export Bar */}
+        <motion.div variants={sectionVariants}>
+          <ExportFilterBar />
+        </motion.div>
 
         {/* Telemetry Charts (Timeline, Spend Share, SLA Gauges) */}
         <motion.div variants={sectionVariants}>
