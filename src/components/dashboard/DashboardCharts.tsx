@@ -112,7 +112,7 @@ export function DashboardCharts() {
             )}
           </div>
 
-          <div className="h-64 w-full">
+          <div className="h-[280px] sm:h-[320px] w-full overflow-hidden">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={timelineData || []} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                 <defs>
@@ -154,7 +154,7 @@ export function DashboardCharts() {
               Cost distribution across integrated APIs
             </p>
 
-            <div className="h-48 w-full">
+            <div className="h-[280px] sm:h-[320px] w-full overflow-hidden">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie

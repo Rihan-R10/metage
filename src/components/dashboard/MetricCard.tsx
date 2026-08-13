@@ -28,9 +28,8 @@ export function MetricCard({
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.35, delay: index * 0.08, ease: 'easeOut' }}
-      whileHover={{ scale: 1.02 }}
       className={cn(
-        'rounded-xl border border-slate-800 bg-slate-950/60 p-5',
+        'rounded-xl bg-zinc-900/60 backdrop-blur-md border border-zinc-800/80 p-5 transition-all duration-300 ease-out hover:-translate-y-1 hover:shadow-[0_8px_30px_rgb(16,185,129,0.15)] hover:border-emerald-500/30 will-change-transform',
         border
       )}
     >

@@ -109,7 +109,7 @@ export function ApiKeyModal({ isOpen, onClose }: ApiKeyModalProps) {
               <button
                 type="button"
                 onClick={onClose}
-                className="rounded-lg p-1 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200 transition"
+                className="rounded-lg p-1 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200 transition active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -125,7 +125,7 @@ export function ApiKeyModal({ isOpen, onClose }: ApiKeyModalProps) {
                   <button
                     type="button"
                     onClick={() => setShowKeys(!showKeys)}
-                    className="text-xs text-zinc-500 hover:text-zinc-300 flex items-center gap-1"
+                    className="text-xs text-zinc-500 hover:text-zinc-300 flex items-center gap-1 rounded px-1 transition active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
                   >
                     {showKeys ? (
                       <>
@@ -197,7 +197,7 @@ export function ApiKeyModal({ isOpen, onClose }: ApiKeyModalProps) {
                   type="button"
                   onClick={handleClear}
                   disabled={!hasKeys && !openaiKey && !anthropicKey && !openrouterKey}
-                  className="inline-flex items-center gap-1.5 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-xs font-medium text-red-400 transition hover:bg-red-500/20 disabled:opacity-40 disabled:cursor-not-allowed"
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-xs font-medium text-red-400 transition hover:bg-red-500/20 disabled:opacity-40 disabled:cursor-not-allowed active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
                 >
                   <Trash2 className="h-3.5 w-3.5" />
                   Clear Keys
@@ -207,14 +207,14 @@ export function ApiKeyModal({ isOpen, onClose }: ApiKeyModalProps) {
                   <button
                     type="button"
                     onClick={onClose}
-                    className="rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-xs font-medium text-zinc-300 transition hover:bg-zinc-700 hover:text-zinc-100"
+                    className="rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-xs font-medium text-zinc-300 transition hover:bg-zinc-700 hover:text-zinc-100 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
                     disabled={isSaving}
-                    className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-4 py-2 text-xs font-medium text-white transition hover:bg-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 disabled:opacity-60"
+                    className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-4 py-2 text-xs font-medium text-white transition hover:bg-emerald-500 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 disabled:opacity-60"
                   >
                     <ShieldCheck className="h-3.5 w-3.5" />
                     {isSaving ? 'Saving…' : 'Save Keys'}

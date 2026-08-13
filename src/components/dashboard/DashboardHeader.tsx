@@ -63,7 +63,7 @@ export function DashboardHeader() {
             type="button"
             onClick={() => void pollAllProviders()}
             disabled={isPolling}
-            className="inline-flex items-center gap-2 rounded-lg border border-slate-700 bg-slate-900 px-4 py-2 text-sm font-medium text-zinc-100 transition hover:border-emerald-500/40 hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+            className="inline-flex items-center gap-2 rounded-lg border border-slate-700 bg-slate-900 px-4 py-2 text-sm font-medium text-zinc-100 transition hover:border-emerald-500/40 hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
           >
             <RefreshCw
               className={cn('h-4 w-4', isPolling && 'animate-spin text-emerald-400')}
