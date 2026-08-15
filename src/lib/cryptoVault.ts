@@ -103,3 +103,15 @@ export async function decryptApiKey(
     throw new Error('Failed to decrypt API key. Check your master passcode.');
   }
 }
+
+export async function verifyPasscode(
+  encryptedData: string,
+  masterPasscode: string
+): Promise<boolean> {
+  try {
+    await decryptApiKey(encryptedData, masterPasscode);
+    return true;
+  } catch {
+    return false;
+  }
+}
