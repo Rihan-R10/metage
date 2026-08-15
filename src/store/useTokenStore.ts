@@ -21,8 +21,10 @@ export interface VaultStatus {
 
 export interface TokenStoreState {
   accounts: ProviderAccount[];
+  liveAccounts: ProviderAccount[];
   logs: UsageLog[];
   usageLogs: UsageLog[];
+  liveLogs: UsageLog[];
   dateRange: DateRangeOption;
   isMockMode: boolean;
   isPolling: boolean;
@@ -45,8 +47,10 @@ export interface TokenStoreState {
 
 export const useTokenStore = create<TokenStoreState>((set, get) => ({
   accounts: MOCK_ACCOUNTS,
+  liveAccounts: [],
   logs: MOCK_USAGE_LOGS,
   usageLogs: MOCK_USAGE_LOGS,
+  liveLogs: [],
   dateRange: '7D',
   isMockMode: true,
   isPolling: false,
@@ -66,14 +70,24 @@ export const useTokenStore = create<TokenStoreState>((set, get) => ({
 
   addUsageLog: (log) =>
     set((state) => {
-      const updatedLogs = [log, ...state.logs];
+      const updatedLiveLogs = [log, ...state.liveLogs];
       return {
-        logs: updatedLogs,
-        usageLogs: updatedLogs,
+        liveLogs: updatedLiveLogs,
+        logs: state.isMockMode ? state.logs : updatedLiveLogs,
+        usageLogs: state.isMockMode ? state.logs : updatedLiveLogs,
       };
     }),
 
-  toggleMockMode: () => set((state) => ({ isMockMode: !state.isMockMode })),
+  toggleMockMode: () =>
+    set((state) => {
+      const nextMockState = !state.isMockMode;
+      return {
+        isMockMode: nextMockState,
+        accounts: nextMockState ? MOCK_ACCOUNTS : state.liveAccounts,
+        logs: nextMockState ? MOCK_USAGE_LOGS : state.liveLogs,
+        usageLogs: nextMockState ? MOCK_USAGE_LOGS : state.liveLogs,
+      };
+    }),
 
   pollAllProviders: async () => {
     set({ isPolling: true });

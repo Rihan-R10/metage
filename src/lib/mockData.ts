@@ -9,6 +9,28 @@ function hoursAgo(hours: number): string {
   return new Date(Date.now() - hours * 60 * 60 * 1000).toISOString();
 }
 
+// Baseline Live Vault Data (Real / API Driven)
+export const LIVE_METRICS = {
+  totalSpend: 0.71,
+  totalTokens: 174800,
+  avgLatency: 240,
+  activeKeys: 2,
+  spendChange: '+0.0%',
+};
+
+// Simulated Mock Data (Generates higher randomized numbers to visually prove mode switch)
+export const SIMULATED_METRICS = {
+  totalSpend: 24.85,
+  totalTokens: 890400,
+  avgLatency: 180,
+  activeKeys: 5,
+  spendChange: '+14.2%',
+};
+
+export function getMetricsForMode(isMockMode: boolean) {
+  return isMockMode ? SIMULATED_METRICS : LIVE_METRICS;
+}
+
 function createRateLimit(
   partial: Partial<RateLimitStatus> & Pick<RateLimitStatus, 'polledAt'>
 ): RateLimitStatus {
