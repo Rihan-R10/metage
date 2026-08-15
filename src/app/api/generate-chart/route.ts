@@ -1,79 +1,161 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
+import type { ProviderId } from '@/types';
 
-export async function POST(req: Request) {
-  try {
-    const body = await req.json();
-    const { prompt, customApiKey } = body;
+const PROVIDER_BASES: Partial<Record<ProviderId, string>> = {
+  openai: 'https://api.openai.com/v1',
+  anthropic: 'https://api.anthropic.com/v1',
+  groq: 'https://api.groq.com/openai/v1',
+  openrouter: 'https://openrouter.ai/api/v1',
+  gemini: 'https://generativelanguage.googleapis.com/v1beta',
+};
 
-    const apiKey = customApiKey || process.env.OPENAI_API_KEY;
+const RATE_LIMIT_HEADER_PREFIXES = ['x-ratelimit-', 'anthropic-ratelimit-'];
 
-    if (!apiKey) {
-      return NextResponse.json(
-        { error: 'No API key detected. Provide a key in the Vault or set OPENAI_API_KEY in .env.local.' },
-        { status: 400 }
-      );
-    }
+interface ProxyRequestBody {
+  providerId?: ProviderId;
+  apiKey?: string;
+  endpoint?: string;
+  method?: 'GET' | 'POST';
+  body?: unknown;
+}
 
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
+function isProviderId(value: unknown): value is ProviderId {
+  return (
+    value === 'openai' ||
+    value === 'anthropic' ||
+    value === 'groq' ||
+    value === 'openrouter' ||
+    value === 'gemini'
+  );
+}
+
+function buildProviderHeaders(
+  providerId: ProviderId,
+  apiKey: string
+): Record<string, string> {
+  switch (providerId) {
+    case 'openai':
+    case 'groq':
+    case 'openrouter':
+      return {
+        Authorization: `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model: 'gpt-4o-mini',
-        response_format: { type: 'json_object' },
-        messages: [
-          {
-            role: 'system',
-            content: `You are a chart data generator. Generate numerical chart data based on the user request.
-You MUST return ONLY a JSON object with this exact structure:
-{
-  "chartTitle": "Title of the chart",
-  "data": [
-    { "label": "Jan", "value": 100 },
-    { "label": "Feb", "value": 200 }
-  ]
-}`,
-          },
-          {
-            role: 'user',
-            content: prompt || 'Generate a monthly growth chart for the last 6 months',
-          },
-        ],
-        temperature: 0.7,
-      }),
+      };
+    case 'anthropic':
+      return {
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'Content-Type': 'application/json',
+      };
+    case 'gemini':
+      return {
+        'x-goog-api-key': apiKey,
+        'Content-Type': 'application/json',
+      };
+  }
+}
+
+function extractRateLimitHeaders(headers: Headers): Record<string, string> {
+  const rateLimitHeaders: Record<string, string> = {};
+
+  headers.forEach((value, key) => {
+    const lowerKey = key.toLowerCase();
+    if (
+      RATE_LIMIT_HEADER_PREFIXES.some((prefix) => lowerKey.startsWith(prefix))
+    ) {
+      rateLimitHeaders[key] = value;
+    }
+  });
+
+  return rateLimitHeaders;
+}
+
+function normalizeEndpoint(endpoint: string): string | null {
+  if (!endpoint.startsWith('/') || endpoint.startsWith('//')) {
+    return null;
+  }
+
+  try {
+    const parsed = new URL(endpoint, 'https://proxy.local');
+    if (parsed.origin !== 'https://proxy.local') {
+      return null;
+    }
+    return `${parsed.pathname}${parsed.search}`;
+  } catch {
+    return null;
+  }
+}
+
+export async function POST(request: NextRequest) {
+  let payload: ProxyRequestBody;
+
+  try {
+    payload = (await request.json()) as ProxyRequestBody;
+  } catch {
+    return NextResponse.json({ error: 'Invalid JSON body.' }, { status: 400 });
+  }
+
+  const { providerId, apiKey, endpoint, method = 'GET', body } = payload;
+
+  if (!isProviderId(providerId)) {
+    return NextResponse.json({ error: 'Invalid providerId.' }, { status: 400 });
+  }
+
+  if (!apiKey || typeof apiKey !== 'string') {
+    return NextResponse.json({ error: 'Missing apiKey.' }, { status: 400 });
+  }
+
+  if (!endpoint || typeof endpoint !== 'string') {
+    return NextResponse.json({ error: 'Missing endpoint.' }, { status: 400 });
+  }
+
+  const normalizedEndpoint = normalizeEndpoint(endpoint);
+  if (!normalizedEndpoint) {
+    return NextResponse.json({ error: 'Invalid endpoint.' }, { status: 400 });
+  }
+
+  if (method !== 'GET' && method !== 'POST') {
+    return NextResponse.json({ error: 'Invalid method.' }, { status: 400 });
+  }
+
+  const baseUrl = PROVIDER_BASES[providerId];
+  if (!baseUrl) {
+    return NextResponse.json({ error: 'Unsupported provider.' }, { status: 400 });
+  }
+
+  const url = `${baseUrl}${normalizedEndpoint}`;
+  const headers = buildProviderHeaders(providerId, apiKey);
+
+  try {
+    const providerResponse = await fetch(url, {
+      method,
+      headers,
+      body: method === 'POST' && body !== undefined ? JSON.stringify(body) : undefined,
+      cache: 'no-store',
     });
 
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      if (response.status === 401) {
-        return NextResponse.json(
-          { error: 'Invalid OpenAI API Key (401). Check the key in your vault.' },
-          { status: 401 }
-        );
+    const responseText = await providerResponse.text();
+    let responseBody: unknown = responseText;
+
+    if (responseText) {
+      try {
+        responseBody = JSON.parse(responseText);
+      } catch {
+        responseBody = responseText;
       }
-      if (response.status === 429) {
-        return NextResponse.json(
-          { error: 'Quota Exceeded (429). Check your OpenAI account billing balance.' },
-          { status: 429 }
-        );
-      }
-      return NextResponse.json(
-        { error: errorData.error?.message || 'OpenAI API Error' },
-        { status: response.status }
-      );
+    } else {
+      responseBody = null;
     }
 
-    const data = await response.json();
-    const rawContent = data.choices[0]?.message?.content;
-    const parsedData = JSON.parse(rawContent);
-
-    return NextResponse.json(parsedData);
-  } catch (error: any) {
+    return NextResponse.json({
+      status: providerResponse.status,
+      body: responseBody,
+      headers: extractRateLimitHeaders(providerResponse.headers),
+    });
+  } catch (err: any) {
     return NextResponse.json(
-      { error: error.message || 'Internal Server Error' },
-      { status: 500 }
+      { error: err.message || 'Failed to connect to AI provider base URL.' },
+      { status: 502 }
     );
   }
 }

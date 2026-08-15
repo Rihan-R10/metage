@@ -33,19 +33,27 @@ function buildProviderHeaders(
 ): Record<string, string> {
   switch (providerId) {
     case 'openai':
+    case 'groq':
+    case 'openrouter':
       return {
         Authorization: `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
       };
     case 'anthropic':
       return {
         'x-api-key': apiKey,
         'anthropic-version': '2023-06-01',
-        'content-type': 'application/json',
+        'Content-Type': 'application/json',
       };
-    case 'groq':
-    case 'openrouter':
+    case 'gemini':
+      return {
+        'x-goog-api-key': apiKey,
+        'Content-Type': 'application/json',
+      };
+    default:
       return {
         Authorization: `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
       };
   }
 }

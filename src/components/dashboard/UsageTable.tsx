@@ -24,8 +24,8 @@ const PROVIDER_LABELS: Record<ProviderId, string> = {
   anthropic: 'Anthropic',
   groq: 'Groq',
   openrouter: 'OpenRouter',
+  gemini: 'Google Gemini',
 };
-
 
 type Timeframe = '24h' | '7d' | '30d';
 

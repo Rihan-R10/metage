@@ -1,4 +1,4 @@
-export type ProviderId = 'openai' | 'anthropic' | 'groq' | 'openrouter';
+export type ProviderId = 'openai' | 'anthropic' | 'groq' | 'openrouter' | 'gemini';
 
 export type ProviderStatus = 'NORMAL' | 'WARN' | 'EXHAUSTED' | 'healthy' | 'degraded' | 'offline';
 
@@ -68,3 +68,15 @@ export interface KPIMetrics {
   activeBurnRate: number;
   projectedMonthlySpend: number;
 }
+export interface ProviderConfig {
+  id: ProviderId;
+  name: string;
+}
+
+export const PROVIDERS: ProviderConfig[] = [
+  { id: 'openai', name: 'OpenAI' },
+  { id: 'anthropic', name: 'Anthropic' },
+  { id: 'groq', name: 'Groq' },
+  { id: 'openrouter', name: 'OpenRouter' },
+  { id: 'gemini', name: 'Google Gemini' },
+];
