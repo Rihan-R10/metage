@@ -1,6 +1,10 @@
 export type ProviderId = 'openai' | 'anthropic' | 'groq' | 'openrouter';
 
-export type ProviderStatus = 'NORMAL' | 'WARN' | 'EXHAUSTED';
+export type ProviderStatus = 'NORMAL' | 'WARN' | 'EXHAUSTED' | 'healthy' | 'degraded' | 'offline';
+
+export type DateRangeOption = '24H' | '7D' | '30D' | '90D' | '1Y' | 'ALL' | '7d' | '30d' | '90d' | 'ytd';
+
+export type DateRange = DateRangeOption;
 
 export interface RateLimitStatus {
   requestsRemaining: number | null;
@@ -19,13 +23,48 @@ export interface UsageLog {
   timestamp: string;
   inputTokens?: number;
   outputTokens?: number;
+  promptTokens?: number;
+  completionTokens?: number;
   totalTokens?: number;
   requests?: number;
   cost?: number;
   model?: string;
+  latencyMs?: number;
+  status?: 'success' | 'error' | string;
 }
 
 export interface ProviderTelemetry {
   rateLimit: RateLimitStatus;
   latestLogs: UsageLog[];
+}
+
+export interface ProviderAccount {
+  id: string;
+  providerId: ProviderId;
+  name: string;
+  status: ProviderStatus;
+  rateLimit: RateLimitStatus;
+  apiKey?: string;
+  hasKey?: boolean;
+  balance?: number;
+  usage?: number;
+  limit?: number;
+  lastSync?: string;
+  errorMessage?: string;
+  latencyMs?: number;
+  errorRate?: number;
+}
+
+export interface KPIMetrics {
+  totalMonthlyCost: number;
+  costChangePercent: number;
+  totalTokens: number;
+  activeKeysCount: number;
+  promptTokens: number;
+  completionTokens: number;
+  avgLatencyMs: number;
+  errorRatePercent: number;
+  todaySpend: number;
+  activeBurnRate: number;
+  projectedMonthlySpend: number;
 }
