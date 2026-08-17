@@ -1,36 +1,44 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# ⚡ TokenDash
 
-## Getting Started
+> **Privacy-First, Real-Time AI Telemetry & API Key Management Dashboard**
 
-First, run the development server:
+[![Next.js](https://img.shields.io/badge/Next.js-16-black?style=flat-square&logo=next.js)](https://nextjs.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue?style=flat-square&logo=typescript)](https://www.typescriptlang.org/)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind-CSS-38B2AC?style=flat-square&logo=tailwind-css)](https://tailwindcss.com/)
+[![License](https://img.shields.io/badge/License-MIT-emerald?style=flat-square)](LICENSE)
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+TokenDash is a lightweight, zero-knowledge HUD designed for AI engineers, developers, and founders. Track multi-provider token consumption, monitor API latency, estimate burn rates, and manage API keys locally without sending credentials or telemetry logs to third-party cloud databases.
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+---
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## ✨ Key Features
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- **🔐 Zero-Knowledge Web Crypto Vault:** Native client-side **AES-256-GCM** encryption using master passcodes. API keys stay inside your browser's local storage and are never uploaded to remote servers.
+- **🌐 Unified Multi-Provider Normalization:** Seamlessly aggregates telemetry metrics across **OpenAI**, **Anthropic**, and **OpenRouter** into a single glass pane.
+- **⚡ Serverless CORS Proxy (`/api/proxy`):** Built-in Next.js route handler to safely poll provider health and rate-limit endpoints without exposing client IP addresses or violating browser CORS policies.
+- **📊 Real-time Cyberpunk HUD UI:** Animated metric cards (Framer Motion), interactive token usage charts, live terminal streaming logs, and provider status indicators built on `#090a0f` styling with cyan glowing accents.
+- **🧪 Mock Telemetry Engine:** Integrated sandbox mode allowing full interactive testing and visualization without spending live API credits.
+- **📥 Telemetry Export:** Instant log filtering and one-click data export to **CSV** and **JSON** formats for financial reporting and compliance.
 
-## Learn More
+---
 
-To learn more about Next.js, take a look at the following resources:
+## 🛡️ Architecture & Security Model
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+TokenDash operates on a **Local-First, Client-Side Cryptographic** paradigm:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+┌────────────────────────────────────────────────────────┐
+│                   Browser Client                       │
+│  ┌──────────────────────┐    ┌──────────────────────┐  │
+│  │   AES-256 Vault      │    │  Zustand State Engine│  │
+│  └──────────┬───────────┘    └──────────┬───────────┘  │
+└─────────────┼───────────────────────────┼──────────────┘
+│ Enriched Telemetry        │ Proxy Forwarding
+▼                           ▼
+┌──────────────────────────────────────────────────────┐
+│        Next.js Route Handler (/api/proxy)            │
+└──────────────────────────┬───────────────────────────┘
+│ Forward Requests
+▼
+┌─────────────────────────────┐
+│ OpenAI / Anthropic / API    │
+└─────────────────────────────┘
