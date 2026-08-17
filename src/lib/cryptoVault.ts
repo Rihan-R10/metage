@@ -1,3 +1,6 @@
+// ==========================================
+// Web Crypto Encryption Settings
+// ==========================================
 const PBKDF2_ITERATIONS = 100_000;
 const SALT_BYTES = 16;
 const IV_BYTES = 12;
@@ -111,6 +114,102 @@ export async function verifyPasscode(
   try {
     await decryptApiKey(encryptedData, masterPasscode);
     return true;
+  } catch {
+    return false;
+  }
+}
+
+// ==========================================
+// API Key Types & Vault Storage
+// ==========================================
+export interface ApiKeys {
+  openai?: string;
+  anthropic?: string;
+  gemini?: string;
+  grok?: string;
+}
+
+export type KeyStatus = 'unconfigured' | 'testing' | 'valid' | 'invalid';
+
+export type KeyStatuses = Record<keyof ApiKeys, KeyStatus>;
+
+const STORAGE_KEY = 'api_vault_keys_v1';
+
+export function loadSavedKeys(): ApiKeys {
+  if (typeof window === 'undefined') return {};
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+}
+
+export function saveKeysToStorage(keys: ApiKeys): void {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(keys));
+  } catch (error) {
+    console.error('Failed to save API keys to storage:', error);
+  }
+}
+
+// ==========================================
+// Provider Key Verification Functions
+// ==========================================
+export async function verifyOpenAIKey(key: string): Promise<boolean> {
+  if (!key.startsWith('sk-')) return false;
+  try {
+    const res = await fetch('https://api.openai.com/v1/models', {
+      headers: { Authorization: `Bearer ${key}` },
+    });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
+export async function verifyAnthropicKey(key: string): Promise<boolean> {
+  if (!key.startsWith('sk-ant-')) return false;
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'x-api-key': key,
+        'anthropic-version': '2023-06-01',
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'claude-3-haiku-20240307',
+        max_tokens: 1,
+        messages: [{ role: 'user', content: 'ping' }],
+      }),
+    });
+    return res.status !== 401 && res.status !== 403;
+  } catch {
+    return false;
+  }
+}
+
+export async function verifyGeminiKey(key: string): Promise<boolean> {
+  if (!key.trim()) return false;
+  try {
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models?key=${key}`
+    );
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
+export async function verifyGrokKey(key: string): Promise<boolean> {
+  if (!key.trim()) return false;
+  try {
+    const res = await fetch('https://api.x.ai/v1/models', {
+      headers: { Authorization: `Bearer ${key}` },
+    });
+    return res.ok;
   } catch {
     return false;
   }

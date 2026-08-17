@@ -19,6 +19,13 @@ export interface VaultStatus {
   algorithm: string;
 }
 
+export interface ApiKeys {
+  openai?: string;
+  anthropic?: string;
+  gemini?: string;
+  grok?: string;
+}
+
 export interface TokenStoreState {
   accounts: ProviderAccount[];
   liveAccounts: ProviderAccount[];
@@ -32,6 +39,7 @@ export interface TokenStoreState {
   masterPasscode: string;
   monthlyBudget: number;
   hasKeys: boolean;
+  apiKeys: ApiKeys;
 
   setDateRange: (range: DateRangeOption) => void;
   updateAccountStatus: (id: string, status: ProviderAccount['status']) => void;
@@ -43,6 +51,8 @@ export interface TokenStoreState {
   getFilteredUsageLogs: () => UsageLog[];
   getKPIMetrics: () => KPIMetrics;
   getMetricsSummary: () => KPIMetrics;
+  setApiKey: (provider: keyof ApiKeys, key: string) => void;
+  setApiKeys: (keys: ApiKeys) => void;
 }
 
 export const useTokenStore = create<TokenStoreState>((set, get) => ({
@@ -58,6 +68,12 @@ export const useTokenStore = create<TokenStoreState>((set, get) => ({
   masterPasscode: '',
   monthlyBudget: 500,
   hasKeys: true,
+  apiKeys: {
+    openai: '',
+    anthropic: '',
+    gemini: '',
+    grok: '',
+  },
 
   setDateRange: (dateRange) => set({ dateRange }),
 
@@ -89,6 +105,26 @@ export const useTokenStore = create<TokenStoreState>((set, get) => ({
       };
     }),
 
+  setApiKey: (provider, key) =>
+    set((state) => {
+      const updatedKeys = { ...state.apiKeys, [provider]: key };
+      const hasAnyKey = Object.values(updatedKeys).some((k) => Boolean(k && k.trim()));
+      return {
+        apiKeys: updatedKeys,
+        hasKeys: hasAnyKey,
+      };
+    }),
+
+  setApiKeys: (keys) =>
+    set((state) => {
+      const updatedKeys = { ...state.apiKeys, ...keys };
+      const hasAnyKey = Object.values(updatedKeys).some((k) => Boolean(k && k.trim()));
+      return {
+        apiKeys: updatedKeys,
+        hasKeys: hasAnyKey,
+      };
+    }),
+
   pollAllProviders: async () => {
     set({ isPolling: true });
     await new Promise((resolve) => setTimeout(resolve, 800));
@@ -97,16 +133,21 @@ export const useTokenStore = create<TokenStoreState>((set, get) => ({
 
   checkKeysStatus: async () => {
     await new Promise((resolve) => setTimeout(resolve, 200));
-    set({ hasKeys: get().accounts.some((a) => Boolean(a.apiKey || a.hasKey)) });
+    const keysState = get().apiKeys;
+    const configuredKeys = Object.values(keysState).filter((k) => Boolean(k && k.trim())).length;
+    const accountKeys = get().accounts.some((a) => Boolean(a.apiKey || a.hasKey));
+    set({ hasKeys: configuredKeys > 0 || accountKeys });
   },
 
   getVaultStatus: () => {
-    const accounts = get().accounts;
-    const count = accounts.length;
+    const { accounts, apiKeys } = get();
+    const activeConfiguredKeys = Object.values(apiKeys).filter((k) => Boolean(k && k.trim())).length;
+    const totalKeys = Math.max(accounts.length, activeConfiguredKeys);
+    
     return {
-      totalKeys: count,
+      totalKeys,
       activeKeys: accounts.filter((a) => a.status !== 'EXHAUSTED').length,
-      keysConfiguredCount: count,
+      keysConfiguredCount: activeConfiguredKeys > 0 ? activeConfiguredKeys : accounts.length,
       encrypted: true,
       isEncrypted: true,
       algorithm: 'AES-256-GCM',

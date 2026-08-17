@@ -22,7 +22,7 @@ import { useTokenStore } from '@/store/useTokenStore';
 import { useHasMounted } from '@/hooks/useHasMounted';
 import { ExportFilterBar } from '@/components/dashboard/ExportFilterBar';
 
-const containerVariants = {
+const containerVariants: Variants = {
   hidden: { opacity: 0 },
   visible: {
     opacity: 1,
@@ -125,19 +125,19 @@ export default function Home() {
   ];
 
   return (
-    <div className="min-h-screen bg-[#09090b] text-zinc-100 relative">
+    <div className="relative min-h-screen bg-[#09090b] text-zinc-100">
       <DashboardHeader />
 
       {/* Top Status & Vault Action Bar */}
-      <div className="max-w-7xl mx-auto px-6 pt-4 flex flex-wrap items-center justify-between gap-4 border-b border-zinc-800/60 pb-4">
+      <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4 border-b border-zinc-800/60 px-6 pt-4 pb-4">
         <div className="flex flex-wrap items-center gap-3">
-          <span className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-mono">
-            <ShieldCheck className="w-3.5 h-3.5" /> AES-256 Secured Vault
+          <span className="flex items-center gap-1.5 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3 py-1 font-mono text-xs text-emerald-400">
+            <ShieldCheck className="h-3.5 w-3.5" /> AES-256 Secured Vault
           </span>
-          <span className="px-2.5 py-1 rounded-full bg-zinc-800 text-zinc-400 text-xs font-mono">
+          <span className="rounded-full bg-zinc-800 px-2.5 py-1 font-mono text-xs text-zinc-400">
             Keys Configured: {vaultStatus.keysConfiguredCount}
           </span>
-          <span className="px-2.5 py-1 rounded-full bg-zinc-800 text-zinc-400 text-xs font-mono">
+          <span className="rounded-full bg-zinc-800 px-2.5 py-1 font-mono text-xs text-zinc-400">
             Passcode: {masterPasscode ? 'Unlocked' : 'Default / Locked'}
           </span>
         </div>
@@ -147,13 +147,13 @@ export default function Home() {
           <button
             type="button"
             onClick={toggleMockMode}
-            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium border transition cursor-pointer active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 ${
+            className={`flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-1.5 text-xs font-medium transition active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 ${
               isMockMode
-                ? 'bg-amber-500/10 border-amber-500/30 text-amber-400 hover:bg-amber-500/20'
-                : 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/20'
+                ? 'border-amber-500/30 bg-amber-500/10 text-amber-400 hover:bg-amber-500/20'
+                : 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20'
             }`}
           >
-            <Sparkles className="w-3.5 h-3.5" />
+            <Sparkles className="h-3.5 w-3.5" />
             Mode: {isMockMode ? 'Mock Data (Demo)' : 'Live Vault'}
           </button>
 
@@ -161,9 +161,9 @@ export default function Home() {
           <button
             type="button"
             onClick={() => setIsApiKeyModalOpen(true)}
-            className="flex items-center gap-2 bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/30 text-cyan-400 px-4 py-1.5 rounded-lg text-xs font-medium transition cursor-pointer active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
+            className="flex cursor-pointer items-center gap-2 rounded-lg border border-cyan-500/30 bg-cyan-500/10 px-4 py-1.5 text-xs font-medium text-cyan-400 transition hover:bg-cyan-500/20 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
           >
-            <Key className="w-3.5 h-3.5" /> API Keys & Vault
+            <Key className="h-3.5 w-3.5" /> API Keys & Vault
           </button>
         </div>
       </div>
@@ -177,32 +177,32 @@ export default function Home() {
         {/* Monthly Budget Cap Bar */}
         <motion.section
           variants={sectionVariants}
-          className="bg-zinc-900/60 border border-zinc-800/80 rounded-xl p-4 shadow-lg flex flex-col md:flex-row items-start md:items-center justify-between gap-4"
+          className="flex flex-col items-start justify-between gap-4 rounded-xl border border-zinc-800/80 bg-zinc-900/60 p-4 shadow-lg md:flex-row md:items-center"
         >
           <div className="space-y-1">
             <div className="flex items-center gap-2">
               <span className="text-sm font-semibold text-zinc-200">Monthly Budget Cap</span>
               {budgetUsagePercent >= 90 && (
-                <span className="flex items-center gap-1 text-xs text-red-400 bg-red-500/10 px-2 py-0.5 rounded border border-red-500/20 font-mono">
-                  <AlertTriangle className="w-3 h-3" /> Near Threshold
+                <span className="flex items-center gap-1 rounded border border-red-500/20 bg-red-500/10 px-2 py-0.5 font-mono text-xs text-red-400">
+                  <AlertTriangle className="h-3 w-3" /> Near Threshold
                 </span>
               )}
             </div>
             <p className="text-xs text-zinc-400">
               Projected spend is{' '}
-              <span className="text-zinc-200 font-mono font-medium">
+              <span className="font-mono font-medium text-zinc-200">
                 {formatCurrency(metrics.projectedMonthlySpend)}
               </span>{' '}
               of your{' '}
-              <span className="text-zinc-200 font-mono font-medium">
+              <span className="font-mono font-medium text-zinc-200">
                 {formatCurrency(monthlyBudget)}
               </span>{' '}
               monthly limit.
             </p>
           </div>
 
-          <div className="w-full md:w-72 space-y-1.5">
-            <div className="flex justify-between text-xs font-mono">
+          <div className="w-full space-y-1.5 md:w-72">
+            <div className="flex justify-between font-mono text-xs">
               <span className="text-zinc-400">Usage Progress</span>
               <span
                 className={`font-semibold ${
@@ -216,7 +216,7 @@ export default function Home() {
                 {budgetUsagePercent}%
               </span>
             </div>
-            <div className="w-full bg-zinc-800 rounded-full h-2.5 overflow-hidden">
+            <div className="h-2.5 w-full overflow-hidden rounded-full bg-zinc-800">
               <div
                 className={`h-full rounded-full transition-all duration-500 ${
                   budgetUsagePercent >= 90
@@ -246,7 +246,7 @@ export default function Home() {
           <ExportFilterBar />
         </motion.div>
 
-        {/* Telemetry Charts (Timeline, Spend Share, SLA Gauges) */}
+        {/* Telemetry Charts */}
         <motion.div variants={sectionVariants}>
           <DashboardCharts />
         </motion.div>
