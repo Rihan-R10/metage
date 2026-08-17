@@ -6,6 +6,7 @@ const PROVIDER_BASES: Partial<Record<ProviderId, string>> = {
   anthropic: 'https://api.anthropic.com/v1',
   groq: 'https://api.groq.com/openai/v1',
   openrouter: 'https://openrouter.ai/api/v1',
+  gemini: 'https://generativelanguage.googleapis.com/v1beta',
 };
 
 const RATE_LIMIT_HEADER_PREFIXES = ['x-ratelimit-', 'anthropic-ratelimit-'];
@@ -23,7 +24,8 @@ function isProviderId(value: unknown): value is ProviderId {
     value === 'openai' ||
     value === 'anthropic' ||
     value === 'groq' ||
-    value === 'openrouter'
+    value === 'openrouter' ||
+    value === 'gemini'
   );
 }
 
@@ -128,30 +130,37 @@ export async function POST(request: NextRequest) {
   const url = `${baseUrl}${normalizedEndpoint}`;
   const headers = buildProviderHeaders(providerId, apiKey);
 
-  const providerResponse = await fetch(url, {
-    method,
-    headers,
-    body:
-      method === 'POST' && body !== undefined ? JSON.stringify(body) : undefined,
-    cache: 'no-store',
-  });
+  try {
+    const providerResponse = await fetch(url, {
+      method,
+      headers,
+      body:
+        method === 'POST' && body !== undefined ? JSON.stringify(body) : undefined,
+      cache: 'no-store',
+    });
 
-  const responseText = await providerResponse.text();
-  let responseBody: unknown = responseText;
+    const responseText = await providerResponse.text();
+    let responseBody: unknown = responseText;
 
-  if (responseText) {
-    try {
-      responseBody = JSON.parse(responseText);
-    } catch {
-      responseBody = responseText;
+    if (responseText) {
+      try {
+        responseBody = JSON.parse(responseText);
+      } catch {
+        responseBody = responseText;
+      }
+    } else {
+      responseBody = null;
     }
-  } else {
-    responseBody = null;
-  }
 
-  return NextResponse.json({
-    status: providerResponse.status,
-    body: responseBody,
-    headers: extractRateLimitHeaders(providerResponse.headers),
-  });
+    return NextResponse.json({
+      status: providerResponse.status,
+      body: responseBody,
+      headers: extractRateLimitHeaders(providerResponse.headers),
+    });
+  } catch (err: any) {
+    return NextResponse.json(
+      { error: 'Upstream request failed', details: err.message },
+      { status: 502 }
+    );
+  }
 }
