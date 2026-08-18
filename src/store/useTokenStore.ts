@@ -55,6 +55,18 @@ export interface TokenStoreState {
   setApiKeys: (keys: ApiKeys) => void;
 }
 
+/** Helper to parse timestamps safely, including formatted strings like "Aug 18, 9:10 AM" */
+function parseTimestamp(ts: string | number): number {
+  if (typeof ts === 'number') return ts;
+  let parsed = new Date(ts).getTime();
+  if (isNaN(parsed)) {
+    // If year is missing (e.g. "Aug 18, 9:10 AM"), append current year
+    const currentYear = new Date().getFullYear();
+    parsed = new Date(`${ts}, ${currentYear}`).getTime();
+  }
+  return isNaN(parsed) ? Date.now() : parsed;
+}
+
 export const useTokenStore = create<TokenStoreState>((set, get) => ({
   accounts: MOCK_ACCOUNTS,
   liveAccounts: [],
@@ -97,11 +109,14 @@ export const useTokenStore = create<TokenStoreState>((set, get) => ({
   toggleMockMode: () =>
     set((state) => {
       const nextMockState = !state.isMockMode;
+      const activeAccounts = nextMockState ? MOCK_ACCOUNTS : state.liveAccounts;
+      const activeLogs = nextMockState ? MOCK_USAGE_LOGS : state.liveLogs;
+
       return {
         isMockMode: nextMockState,
-        accounts: nextMockState ? MOCK_ACCOUNTS : state.liveAccounts,
-        logs: nextMockState ? MOCK_USAGE_LOGS : state.liveLogs,
-        usageLogs: nextMockState ? MOCK_USAGE_LOGS : state.liveLogs,
+        accounts: activeAccounts,
+        logs: activeLogs,
+        usageLogs: activeLogs,
       };
     }),
 
@@ -143,7 +158,7 @@ export const useTokenStore = create<TokenStoreState>((set, get) => ({
     const { accounts, apiKeys } = get();
     const activeConfiguredKeys = Object.values(apiKeys).filter((k) => Boolean(k && k.trim())).length;
     const totalKeys = Math.max(accounts.length, activeConfiguredKeys);
-    
+
     return {
       totalKeys,
       activeKeys: accounts.filter((a) => a.status !== 'EXHAUSTED').length,
@@ -155,22 +170,35 @@ export const useTokenStore = create<TokenStoreState>((set, get) => ({
   },
 
   getFilteredUsageLogs: (): UsageLog[] => {
-    const { logs, dateRange } = get();
-    if (dateRange === 'ALL') return logs;
+    const { isMockMode, liveLogs, dateRange } = get();
+
+    // 1. STRICT SOURCE BRANCH: Never read mock logs when in Live Vault mode
+    const sourceLogs = isMockMode ? MOCK_USAGE_LOGS : liveLogs;
+
+    if (!sourceLogs || sourceLogs.length === 0) {
+      return [];
+    }
+
+    const normRange = (dateRange || '7D').toString().toUpperCase();
+    if (normRange === 'ALL') return sourceLogs;
+
     const now = Date.now();
     const rangeMs: Record<string, number> = {
       '24H': 24 * 60 * 60 * 1000,
       '7D': 7 * 24 * 60 * 60 * 1000,
-      '7d': 7 * 24 * 60 * 60 * 1000,
       '30D': 30 * 24 * 60 * 60 * 1000,
-      '30d': 30 * 24 * 60 * 60 * 1000,
       '90D': 90 * 24 * 60 * 60 * 1000,
-      '90d': 90 * 24 * 60 * 60 * 1000,
       '1Y': 365 * 24 * 60 * 60 * 1000,
-      ytd: now - new Date(new Date().getFullYear(), 0, 1).getTime(),
+      YTD: now - new Date(new Date().getFullYear(), 0, 1).getTime(),
     };
-    const cutoff = now - (rangeMs[dateRange] || 7 * 24 * 60 * 60 * 1000);
-    return logs.filter((log) => new Date(log.timestamp).getTime() >= cutoff);
+
+    const duration = rangeMs[normRange] || 7 * 24 * 60 * 60 * 1000;
+    const cutoff = now - duration;
+
+    return sourceLogs.filter((log) => {
+      const timeMs = parseTimestamp(log.timestamp);
+      return timeMs >= cutoff;
+    });
   },
 
   getKPIMetrics: () => {
