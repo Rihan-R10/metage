@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import {
   AreaChart,
   Area,
@@ -17,19 +17,26 @@ import { TrendingUp, Zap, Clock, ShieldCheck, DollarSign, Activity } from 'lucid
 import { useTokenStore } from '@/store/useTokenStore';
 
 export function DashboardCharts() {
-  const { getFilteredUsageLogs, dateRange, getKPIMetrics, isMockMode } = useTokenStore();
-  
+  const [mounted, setMounted] = useState(false);
+  const { getFilteredUsageLogs, getKPIMetrics, isMockMode } = useTokenStore();
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   const usageLogs = getFilteredUsageLogs ? getFilteredUsageLogs() : [];
-  const kpi: any = getKPIMetrics ? getKPIMetrics() : {
-    totalMonthlyCost: 0,
-    costChangePercent: 0,
-    totalTokens: 0,
-    activeKeysCount: 0,
-    promptTokens: 0,
-    completionTokens: 0,
-    avgLatencyMs: 0,
-    errorRatePercent: 0,
-  };
+  const kpi: any = getKPIMetrics
+    ? getKPIMetrics()
+    : {
+        totalMonthlyCost: 0,
+        costChangePercent: 0,
+        totalTokens: 0,
+        activeKeysCount: 0,
+        promptTokens: 0,
+        completionTokens: 0,
+        avgLatencyMs: 0,
+        errorRatePercent: 0,
+      };
 
   const timelineData = useMemo(() => {
     if (!usageLogs || usageLogs.length === 0) return [];
@@ -129,7 +136,7 @@ export function DashboardCharts() {
       {/* Charts Row */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Area Chart: Token Consumption Timeline */}
-        <div className="lg:col-span-2 bg-zinc-900/60 border border-zinc-800/80 rounded-xl p-5 flex flex-col justify-between">
+        <div className="lg:col-span-2 bg-zinc-900/60 border border-zinc-800/80 rounded-xl p-5 flex flex-col justify-between min-h-[360px]">
           <div className="flex items-center justify-between mb-4">
             <div>
               <h3 className="text-sm font-semibold text-zinc-100 flex items-center gap-2">
@@ -145,65 +152,74 @@ export function DashboardCharts() {
             )}
           </div>
 
-          <div className="h-[280px] sm:h-[320px] w-full overflow-hidden">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={timelineData || []} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                <defs>
-                  <linearGradient id="colorGpt" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#00f3ff" stopOpacity={0.4} />
-                    <stop offset="95%" stopColor="#00f3ff" stopOpacity={0.0} />
-                  </linearGradient>
-                  <linearGradient id="colorClaude" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#10b981" stopOpacity={0.4} />
-                    <stop offset="95%" stopColor="#10b981" stopOpacity={0.0} />
-                  </linearGradient>
-                  <linearGradient id="colorRouter" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.4} />
-                    <stop offset="95%" stopColor="#f59e0b" stopOpacity={0.0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#27272a" vertical={false} />
-                <XAxis dataKey="date" stroke="#71717a" fontSize={11} tickLine={false} />
-                <YAxis stroke="#71717a" fontSize={11} tickLine={false} tickFormatter={(val) => `${(val / 1000).toFixed(0)}k`} />
-                <Tooltip
-                  contentStyle={{ backgroundColor: '#18181b', borderColor: '#27272a', borderRadius: '8px', fontSize: '12px' }}
-                  itemStyle={{ color: '#e4e4e7' }}
-                />
-                <Area type="monotone" dataKey="OpenAI" stroke="#00f3ff" fillOpacity={1} fill="url(#colorGpt)" />
-                <Area type="monotone" dataKey="Anthropic" stroke="#10b981" fillOpacity={1} fill="url(#colorClaude)" />
-                <Area type="monotone" dataKey="OpenRouter" stroke="#f59e0b" fillOpacity={1} fill="url(#colorRouter)" />
-              </AreaChart>
-            </ResponsiveContainer>
+          <div className="h-[280px] sm:h-[320px] w-full min-h-[280px] relative">
+            {mounted ? (
+              <ResponsiveContainer width="100%" height="100%" debounce={100}>
+                <AreaChart data={timelineData || []} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="colorGpt" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#00f3ff" stopOpacity={0.4} />
+                      <stop offset="95%" stopColor="#00f3ff" stopOpacity={0.0} />
+                    </linearGradient>
+                    <linearGradient id="colorClaude" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#10b981" stopOpacity={0.4} />
+                      <stop offset="95%" stopColor="#10b981" stopOpacity={0.0} />
+                    </linearGradient>
+                    <linearGradient id="colorRouter" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.4} />
+                      <stop offset="95%" stopColor="#f59e0b" stopOpacity={0.0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#27272a" vertical={false} />
+                  <XAxis dataKey="date" stroke="#71717a" fontSize={11} tickLine={false} />
+                  <YAxis stroke="#71717a" fontSize={11} tickLine={false} tickFormatter={(val) => `${(val / 1000).toFixed(0)}k`} />
+                  <Tooltip
+                    contentStyle={{ backgroundColor: '#18181b', borderColor: '#27272a', borderRadius: '8px', fontSize: '12px' }}
+                    itemStyle={{ color: '#e4e4e7' }}
+                  />
+                  <Area type="monotone" dataKey="OpenAI" stroke="#00f3ff" fillOpacity={1} fill="url(#colorGpt)" isAnimationActive={false} />
+                  <Area type="monotone" dataKey="Anthropic" stroke="#10b981" fillOpacity={1} fill="url(#colorClaude)" isAnimationActive={false} />
+                  <Area type="monotone" dataKey="OpenRouter" stroke="#f59e0b" fillOpacity={1} fill="url(#colorRouter)" isAnimationActive={false} />
+                </AreaChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="w-full h-full bg-zinc-950/40 animate-pulse rounded-lg" />
+            )}
           </div>
         </div>
 
         {/* Pie Chart: Model Spend Breakdown */}
-        <div className="bg-zinc-900/60 border border-zinc-800/80 rounded-xl p-5 flex flex-col justify-between">
+        <div className="bg-zinc-900/60 border border-zinc-800/80 rounded-xl p-5 flex flex-col justify-between min-h-[360px]">
           <div className="mb-4">
             <h3 className="text-sm font-semibold text-zinc-100">Model Cost Breakdown</h3>
             <p className="text-xs text-zinc-400">Share of spend by LLM model</p>
           </div>
 
-          <div className="h-[200px] w-full relative flex items-center justify-center">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={modelSpendData || []}
-                  innerRadius={50}
-                  outerRadius={75}
-                  paddingAngle={4}
-                  dataKey="value"
-                >
-                  {(modelSpendData || []).map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Pie>
-                <Tooltip
-                  contentStyle={{ backgroundColor: '#18181b', borderColor: '#27272a', borderRadius: '8px', fontSize: '12px' }}
-                  formatter={(val: any) => [`$${val}`, 'Cost']}
-                />
-              </PieChart>
-            </ResponsiveContainer>
+          <div className="h-[200px] w-full min-h-[200px] relative flex items-center justify-center">
+            {mounted ? (
+              <ResponsiveContainer width="100%" height="100%" debounce={100}>
+                <PieChart>
+                  <Pie
+                    data={modelSpendData || []}
+                    innerRadius={50}
+                    outerRadius={75}
+                    paddingAngle={4}
+                    dataKey="value"
+                    isAnimationActive={false}
+                  >
+                    {(modelSpendData || []).map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip
+                    contentStyle={{ backgroundColor: '#18181b', borderColor: '#27272a', borderRadius: '8px', fontSize: '12px' }}
+                    formatter={(val: any) => [`$${val}`, 'Cost']}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="w-full h-full bg-zinc-950/40 animate-pulse rounded-lg" />
+            )}
           </div>
 
           {/* Legend */}
