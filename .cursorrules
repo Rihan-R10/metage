@@ -1,7 +1,0 @@
-# TokenDash Vibe-Coding Rules
-
-- Framework: Next.js (App Router), TypeScript, Tailwind CSS
-- State: Zustand (Client), TanStack Query (API Polling)
-- Theme: Linear/Stripe dark mode (#09090b background, slate borders, emerald/neon accents)
-- Icons: Lucide React
-- Security: Never store API keys in plain text or localStorage. Isolate keys in local memory or encrypted vault handlers.
