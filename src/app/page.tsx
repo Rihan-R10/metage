@@ -21,6 +21,7 @@ import { ApiKeyModal } from '@/components/dashboard/ApiKeyModal';
 import { useTokenStore } from '@/store/useTokenStore';
 import { useHasMounted } from '@/hooks/useHasMounted';
 import { ExportFilterBar } from '@/components/dashboard/ExportFilterBar';
+import { ErrorBoundary } from '@/components/ui/error-boundary';
 
 const containerVariants: Variants = {
   hidden: { opacity: 0 },
@@ -243,26 +244,35 @@ export default function Home() {
 
         {/* Date Range Filter & Export Bar */}
         <motion.div variants={sectionVariants}>
-          <ExportFilterBar />
+          <ErrorBoundary title="Export & Filter Unavailable">
+            <ExportFilterBar />
+          </ErrorBoundary>
         </motion.div>
 
         {/* Telemetry Charts */}
         <motion.div variants={sectionVariants}>
-          <DashboardCharts />
+          <ErrorBoundary title="Telemetry Charts Unavailable">
+            <DashboardCharts />
+          </ErrorBoundary>
         </motion.div>
 
         {/* Provider Health */}
         <motion.div variants={sectionVariants}>
-          <ProviderHealth />
+          <ErrorBoundary title="Provider Health Unavailable">
+            <ProviderHealth />
+          </ErrorBoundary>
         </motion.div>
 
         {/* Usage Logs Table */}
         <motion.div variants={sectionVariants}>
-          <UsageTable />
+          <ErrorBoundary title="Usage Logs Unavailable">
+            <UsageTable />
+          </ErrorBoundary>
         </motion.div>
       </motion.main>
 
       <ApiKeyModal
+        key={isApiKeyModalOpen ? 'open' : 'closed'}
         isOpen={isApiKeyModalOpen}
         onClose={() => setIsApiKeyModalOpen(false)}
       />

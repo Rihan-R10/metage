@@ -1,8 +1,8 @@
 'use client';
 
 import { Activity, RefreshCw, Shield } from 'lucide-react';
-import { useEffect, useState } from 'react';
 import { useTokenStore } from '@/store/useTokenStore';
+import { useFormattedDate } from '@/hooks/useFormattedDate';
 import { cn } from '@/lib/utils';
 
 export function DashboardHeader() {
@@ -11,21 +11,11 @@ export function DashboardHeader() {
   const masterPasscode = useTokenStore((state) => state.masterPasscode);
   const pollAllProviders = useTokenStore((state) => state.pollAllProviders);
 
-  // Defer time formatting to the client to prevent SSR hydration mismatch.
-  // The server has no timezone/locale context matching the user's browser.
-  const [formattedRefresh, setFormattedRefresh] = useState<string>('Never');
-
-  useEffect(() => {
-    setFormattedRefresh(
-      lastRefreshAt
-        ? new Intl.DateTimeFormat('en-US', {
-            hour: 'numeric',
-            minute: '2-digit',
-            second: '2-digit',
-          }).format(new Date(lastRefreshAt))
-        : 'Never'
-    );
-  }, [lastRefreshAt]);
+  const formattedRefresh = useFormattedDate(
+    lastRefreshAt,
+    { hour: 'numeric', minute: '2-digit', second: '2-digit' },
+    'Never'
+  );
 
   return (
     <header className="border-b border-slate-800 bg-[#09090b]/95 backdrop-blur">

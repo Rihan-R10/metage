@@ -29,7 +29,7 @@ function fromBase64(value: string): Uint8Array {
   return bytes;
 }
 
-async function deriveKey(masterPasscode: string, salt: Uint8Array): Promise<CryptoKey> {
+export async function deriveKey(masterPasscode: string, salt: Uint8Array): Promise<CryptoKey> {
   const encoder = new TextEncoder();
   const normalizedSalt = Uint8Array.from(salt);
   const keyMaterial = await window.crypto.subtle.importKey(

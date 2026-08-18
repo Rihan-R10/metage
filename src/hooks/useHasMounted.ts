@@ -1,18 +1,17 @@
-import { useEffect, useState } from 'react';
+import { useSyncExternalStore } from 'react';
 
 /**
  * Returns `true` only after the component has mounted on the client.
  *
- * Use this to prevent SSR/client hydration mismatches caused by
- * store-derived values (e.g. Zustand) that differ between the server
- * render and the first client render.
+ * Uses `useSyncExternalStore` so the server snapshot (`false`) matches the
+ * first client render, avoiding SSR/client hydration mismatches from
+ * store-derived values (e.g. Zustand) while not triggering setState in an
+ * effect.
  */
 export function useHasMounted(): boolean {
-  const [hasMounted, setHasMounted] = useState(false);
-
-  useEffect(() => {
-    setHasMounted(true);
-  }, []);
-
-  return hasMounted;
+  return useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false
+  );
 }

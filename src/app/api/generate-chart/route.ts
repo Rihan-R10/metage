@@ -152,10 +152,9 @@ export async function POST(request: NextRequest) {
       body: responseBody,
       headers: extractRateLimitHeaders(providerResponse.headers),
     });
-  } catch (err: any) {
-    return NextResponse.json(
-      { error: err.message || 'Failed to connect to AI provider base URL.' },
-      { status: 502 }
-    );
+  } catch (err) {
+    const message =
+      err instanceof Error ? err.message : 'Failed to connect to AI provider base URL.';
+    return NextResponse.json({ error: message }, { status: 502 });
   }
 }

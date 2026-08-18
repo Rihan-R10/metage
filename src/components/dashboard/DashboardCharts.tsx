@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo } from 'react';
 import {
   AreaChart,
   Area,
@@ -15,17 +15,19 @@ import {
 } from 'recharts';
 import { TrendingUp, Zap, Clock, ShieldCheck, DollarSign, Activity } from 'lucide-react';
 import { useTokenStore } from '@/store/useTokenStore';
+import { useHasMounted } from '@/hooks/useHasMounted';
+import type { KPIMetrics } from '@/types';
 
 export function DashboardCharts() {
-  const [mounted, setMounted] = useState(false);
+  const mounted = useHasMounted();
   const { getFilteredUsageLogs, getKPIMetrics, isMockMode } = useTokenStore();
 
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  const usageLogs = useMemo(
+    () => (getFilteredUsageLogs ? getFilteredUsageLogs() : []),
+    [getFilteredUsageLogs]
+  );
 
-  const usageLogs = getFilteredUsageLogs ? getFilteredUsageLogs() : [];
-  const kpi: any = getKPIMetrics
+  const kpi: KPIMetrics = getKPIMetrics
     ? getKPIMetrics()
     : {
         totalMonthlyCost: 0,
@@ -36,6 +38,9 @@ export function DashboardCharts() {
         completionTokens: 0,
         avgLatencyMs: 0,
         errorRatePercent: 0,
+        todaySpend: 0,
+        activeBurnRate: 0,
+        projectedMonthlySpend: 0,
       };
 
   const timelineData = useMemo(() => {
@@ -125,7 +130,7 @@ export function DashboardCharts() {
             <ShieldCheck className="w-4 h-4 text-purple-400" />
           </div>
           <div className="text-2xl font-bold text-white font-mono mt-2">
-            {(kpi as any).activeKeysCount || 0}
+            {kpi.activeKeysCount || 0}
           </div>
           <div className="text-[11px] text-zinc-400 font-mono mt-2">
             Error rate: {(kpi.errorRatePercent || 0).toFixed(1)}%
@@ -213,7 +218,7 @@ export function DashboardCharts() {
                   </Pie>
                   <Tooltip
                     contentStyle={{ backgroundColor: '#18181b', borderColor: '#27272a', borderRadius: '8px', fontSize: '12px' }}
-                    formatter={(val: any) => [`$${val}`, 'Cost']}
+                    formatter={(val) => [`$${val}`, 'Cost']}
                   />
                 </PieChart>
               </ResponsiveContainer>

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Eye, EyeOff, CheckCircle2, AlertCircle, Loader2, Trash2, Shield, Lock, Unlock } from 'lucide-react';
 import {
   loadSavedKeys,
@@ -42,7 +42,11 @@ export function ApiKeyModal({ isOpen, onClose }: ApiKeyModalProps) {
   const [isLocked, setIsLocked] = useState(true);
   const [passcode, setPasscode] = useState('');
   const [confirmPasscode, setConfirmPasscode] = useState('');
-  const [isSettingNewPasscode, setIsSettingNewPasscode] = useState(false);
+  const [isSettingNewPasscode, setIsSettingNewPasscode] = useState(() =>
+    typeof window === 'undefined'
+      ? false
+      : !Boolean(localStorage.getItem(PASSCODE_STORAGE_KEY))
+  );
   const [errorMsg, setErrorMsg] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
@@ -59,18 +63,6 @@ export function ApiKeyModal({ isOpen, onClose }: ApiKeyModalProps) {
     gemini: 'unconfigured',
     grok: 'unconfigured',
   });
-
-  useEffect(() => {
-    if (isOpen) {
-      const hasStoredPasscode = Boolean(localStorage.getItem(PASSCODE_STORAGE_KEY));
-      setIsSettingNewPasscode(!hasStoredPasscode);
-      setIsLocked(true);
-      setPasscode('');
-      setConfirmPasscode('');
-      setErrorMsg('');
-      setKeys({});
-    }
-  }, [isOpen]);
 
   const handleUnlockOrCreate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -107,8 +99,8 @@ export function ApiKeyModal({ isOpen, onClose }: ApiKeyModalProps) {
         setIsLocked(false);
         await decryptAllKeys(passcode, savedEncryptedKeys);
       }
-    } catch (err: any) {
-      setErrorMsg(err.message || 'Authentication failed.');
+    } catch (err) {
+      setErrorMsg(err instanceof Error ? err.message : 'Authentication failed.');
     } finally {
       setIsLoading(false);
     }
@@ -160,9 +152,8 @@ export function ApiKeyModal({ isOpen, onClose }: ApiKeyModalProps) {
   const handleSave = async (provider: ProviderId, keyVal: string) => {
     try {
       const encrypted = keyVal ? await encryptApiKey(keyVal, passcode) : '';
-      const currentStorage = (loadSavedKeys() as unknown as Record<string, string>) || {};
-      const updatedStorage = { ...currentStorage, [provider]: encrypted };
-      saveKeysToStorage(updatedStorage as any);
+      const updatedStorage: ApiKeys = { ...loadSavedKeys(), [provider]: encrypted };
+      saveKeysToStorage(updatedStorage);
 
       setKeys((prev) => ({ ...prev, [provider]: keyVal }));
       testKey(provider, keyVal);

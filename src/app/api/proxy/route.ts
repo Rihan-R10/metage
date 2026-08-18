@@ -157,9 +157,10 @@ export async function POST(request: NextRequest) {
       body: responseBody,
       headers: extractRateLimitHeaders(providerResponse.headers),
     });
-  } catch (err: any) {
+  } catch (err) {
+    const details = err instanceof Error ? err.message : String(err);
     return NextResponse.json(
-      { error: 'Upstream request failed', details: err.message },
+      { error: 'Upstream request failed', details },
       { status: 502 }
     );
   }

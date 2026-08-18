@@ -1,7 +1,6 @@
 import { pollAnthropic } from '@/lib/adapters/anthropic';
 import { pollOpenAI } from '@/lib/adapters/openai';
 import { pollOpenRouter } from '@/lib/adapters/openrouter';
-import { proxyFetch } from '@/lib/adapters/proxy';
 import type { ProviderId, ProviderTelemetry } from '@/types';
 
 const ADAPTERS: Partial<
