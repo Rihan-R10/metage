@@ -1,42 +1,46 @@
+<div align="center">
+
 # ⚡ TokenDash
 
-> **Privacy-First, Real-Time AI Telemetry & API Key Management Dashboard**
+**Privacy-First Real-Time Telemetry & Zero-Trust API Key Management Dashboard**
 
-[![Next.js](https://img.shields.io/badge/Next.js-16-black?style=flat-square&logo=next.js)](https://nextjs.org/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue?style=flat-square&logo=typescript)](https://www.typescriptlang.org/)
-[![Tailwind CSS](https://img.shields.io/badge/Tailwind-CSS-38B2AC?style=flat-square&logo=tailwind-css)](https://tailwindcss.com/)
-[![Security](https://img.shields.io/badge/Security-AES--256--GCM-emerald?style=flat-square)](https://developer.mozilla.org/en-US/docs/Web/API/SubtleCrypto)
-[![License](https://img.shields.io/badge/License-MIT-purple?style=flat-square)](LICENSE)
+[![Next.js 16](https://img.shields.io/badge/Next.js-16-black?style=for-the-badge&logo=nextdotjs)](https://nextjs.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.0-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-3.4-06B6D4?style=for-the-badge&logo=tailwindcss&logoColor=white)](https://tailwindcss.com/)
+[![Zustand](https://img.shields.io/badge/State-Zustand-764ABC?style=for-the-badge)](https://github.com/pmndrs/zustand)
+[![Security](https://img.shields.io/badge/Security-AES--256--GCM-emerald?style=for-the-badge)](https://developer.mozilla.org/en-US/docs/Web/API/SubtleCrypto)
+[![Deployed on Vercel](https://img.shields.io/badge/Vercel-Deployed-000000?style=for-the-badge&logo=vercel&logoColor=white)](https://tokendash-8n1kwzgw6-rihan-r11.vercel.app)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](LICENSE)
 
-TokenDash is a zero-knowledge, local-first telemetry HUD engineered for AI teams, developers, and founders. It aggregates multi-provider token consumption, tracks real-time API latency, projects monthly spend, and manages provider secrets—without sending raw API credentials or usage logs to third-party databases.
+[**Explore Live Demo »**](https://tokendash-8n1kwzgw6-rihan-r11.vercel.app) · [Report Bug](https://github.com/rihan-r11/tokendash/issues) · [Request Feature](https://github.com/rihan-r11/tokendash/issues)
+
+</div>
 
 ---
 
-## 🏛️ System Architecture
+## 🔒 Zero-Trust Security Architecture
 
-TokenDash enforces a **Client-Side Cryptographic Paradigm** paired with a stateless edge relay to bypass CORS restrictions while maintaining absolute data isolation.
+TokenDash is built around a **zero-knowledge privacy model**. Your raw API keys are never written to unencrypted storage or transmitted in plaintext across the network.
 
-```mermaid
-flowchart TD
-    subgraph Client ["Browser Client (Zero-Trust Local Memory)"]
-        A[Framer Motion HUD UI] <--> B[Zustand State Store]
-        B <--> C["Web Crypto API (AES-256-GCM Vault)"]
-    end
-
-    subgraph Edge ["Next.js Serverless Layer"]
-        D["/api/proxy Route Handler (Zero-Log / Ephemeral)"]
-    end
-
-    subgraph Upstream ["Upstream AI Providers"]
-        E[OpenAI API]
-        F[Anthropic API]
-        G[Groq / OpenRouter APIs]
-    end
-
-    B -- "Decrypted Key + Payload" --> D
-    D -- "Signed Provider Request" --> Upstream
-    Upstream -- "Telemetry & Rate-Limit Headers" --> D
-    D -- "Sanitized Usage Stream" --> B
+```
+┌──────────────────────────────────────────────────────────┐
+│                   BROWSER CLIENT                         │
+│  - User input key → Web Crypto API (AES-256-GCM)        │
+│  - Key encrypted in-memory before leaving client         │
+└────────────────────────────┬─────────────────────────────┘
+                             │ (Encrypted Ciphertext + IV)
+                             ▼
+┌──────────────────────────────────────────────────────────┐
+│             NEXT.JS SERVERLESS PROXY (/api/proxy)        │
+│  - Validates request payload schema                      │
+│  - Injects authorization headers                         │
+│  - Ephemeral forwarder (zero key persistence)             │
+└────────────────────────────┬─────────────────────────────┘
+                             │ (Authenticated Request)
+                             ▼
+┌──────────────────────────────────────────────────────────┐
+│            UPSTREAM PROVIDERS (OpenAI/Anthropic/etc)     │
+└──────────────────────────────────────────────────────────┘
 ```
 
 ---
@@ -63,13 +67,16 @@ TokenDash treats the network and third-party servers as untrusted zones. All cre
 
 ---
 
-## ⚡ Key Features
+## ✨ Key Features
 
-- **🔐 Zero-Knowledge Web Crypto Vault:** Hardware-accelerated client-side encryption for provider keys using your master passcode.
-- **🌐 Unified Multi-Provider Aggregation:** Standardized token metrics, latency charts, and error rates across **OpenAI**, **Anthropic**, **Groq**, **Gemini**, and **OpenRouter**.
-- **📊 Real-time Cyberpunk HUD:** Animated metric streams, interactive burn-rate charts, and active provider status indicators styled with a `#090a0f` obsidian background and cyan glowing accents.
-- **🧪 Interactive Sandbox Engine:** Mock mode allowing comprehensive UI testing, telemetry visualization, and stress-testing without expending live API credits.
-- **📥 Audit & Telemetry Export:** Instant log filtering across time windows (`24h`, `7d`, `30d`) with one-click export to **CSV** and **JSON**.
+- 🛡️ **Zero-Trust Key Storage:** Encrypted client-side; plain-text keys never touch the server disk.
+- 🔐 **Zero-Knowledge Web Crypto Vault:** Hardware-accelerated client-side encryption for provider keys using your master passcode.
+- 🌐 **Unified Multi-Provider Aggregation:** Standardized token metrics, latency charts, and error rates across **OpenAI**, **Anthropic**, **Groq**, **Gemini**, and **OpenRouter**.
+- 📊 **Real-Time Cyberpunk HUD:** Animated metric streams, interactive burn-rate charts, and active provider status indicators styled with a `#090a0f` obsidian background and cyan glowing accents.
+- 🧪 **Interactive Sandbox Engine:** Mock mode allowing comprehensive UI testing, telemetry visualization, and stress-testing without expending live API credits.
+- 📥 **Audit & Telemetry Export:** Instant log filtering across time windows (`24h`, `7d`, `30d`) with one-click export to **CSV** and **JSON**.
+- ⚡ **Sub-50ms Edge Performance:** Instant serverless execution powered by Next.js Turbopack and Vercel Edge Network.
+- 🎨 **Modular UI Engine:** Built with Framer Motion animations, Lucide icons, and Tailwind CSS.
 
 ---
 
@@ -79,38 +86,103 @@ TokenDash treats the network and third-party servers as untrusted zones. All cre
 | :--- | :--- |
 | **Framework** | Next.js 16 (App Router, Turbopack) |
 | **Language** | TypeScript |
-| **Styling & Motion** | Tailwind CSS, Framer Motion, Lucide React Icons |
 | **State Management** | Zustand (with selective persistence) |
+| **Styling & Motion** | Tailwind CSS, Framer Motion, Lucide React Icons |
 | **Cryptography** | Native Web Crypto API (`window.crypto.subtle`) |
 | **Tooling & Insights** | pnpm, Vercel Speed Insights, Vercel Analytics |
 
 ---
 
-## 🚀 Getting Started
+## 🚀 Quick Start
 
 ### Prerequisites
 
-- **Node.js**: `v18.0.0` or higher
-- **pnpm**: `v8.0.0` or higher (`npm install -g pnpm`)
-
-### Local Setup
+Ensure you have Node.js 18+ and `pnpm` installed:
 
 ```bash
-# 1. Clone the repository
-git clone [https://github.com/Rihan-R10/tokendash.git](https://github.com/Rihan-R10/tokendash.git)
+npm install -g pnpm
+```
+
+### Installation
+
+1. **Clone the Repository:**
+```bash
+git clone https://github.com/rihan-r11/tokendash.git
 cd tokendash
+```
 
-# 2. Install dependencies
+2. **Install Dependencies:**
+```bash
 pnpm install
+```
 
-# 3. Start the development server
+3. **Configure Environment Variables:**
+Create a `.env.local` file in the root directory:
+```bash
+cp .env.example .env.local
+```
+
+Add optional server-side configuration keys:
+```env
+NEXT_PUBLIC_APP_URL=http://localhost:3000
+ENCRYPTION_SECRET=your_optional_server_secret
+```
+
+4. **Run Development Server:**
+```bash
 pnpm dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) in your browser to launch the dashboard.
+Open `http://localhost:3000` in your browser to view the application.
+
+---
+
+## 📂 Project Structure
+
+```text
+tokendash/
+├── src/
+│   ├── app/
+│   │   ├── api/
+│   │   │   └── proxy/route.ts       # Serverless proxy handler
+│   │   ├── globals.css              # HUD glowing utilities
+│   │   ├── layout.tsx
+│   │   └── page.tsx                 # Main telemetry dashboard
+│   ├── components/
+│   │   ├── dashboard/               # Metric cards, HUD charts, & tables
+│   │   └── ui/                      # Base UI primitives
+│   ├── lib/
+│   │   ├── cryptoVault.ts           # AES-256 Web Crypto implementation
+│   │   └── adapters/                # OpenAI, Anthropic, OpenRouter handlers
+│   ├── store/
+│   │   └── useTokenStore.ts         # Zustand state management
+│   └── types/                       # Shared TypeScript interface definitions
+├── public/                          # Static assets
+└── package.json
+```
+
+---
+
+## 🤝 Contributing
+
+Contributions are welcome! If you'd like to report a bug or suggest a feature:
+
+1. Fork the Project
+2. Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the Branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
 
 ---
 
 ## 📜 License
 
-Distributed under the **MIT License**. See [`LICENSE`](LICENSE) for full details.
+Distributed under the MIT License. See [`LICENSE`](LICENSE) for full details.
+
+---
+
+<div align="center">
+
+**Built with ⚡ by [Rihan](https://github.com/rihan-r11)**
+
+</div>
