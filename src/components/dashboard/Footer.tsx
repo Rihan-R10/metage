@@ -10,7 +10,7 @@ export default function Footer() {
           <div className="flex flex-col items-center gap-2 text-center md:items-start md:text-left">
             <div className="flex items-center gap-2 font-mono font-semibold text-cyan-300">
               <span className="h-2 w-2 rounded-full bg-cyan-400 animate-pulse" />
-              TokenDash
+              Hunch
             </div>
             <p className="flex items-center gap-1.5 text-cyan-500/80">
               <svg className="h-4 w-4 text-emerald-400 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -25,7 +25,7 @@ export default function Footer() {
           <div className="flex flex-col items-center gap-3 md:items-end">
             <div className="flex items-center gap-4 font-medium">
               <a
-                href="https://github.com/Rihan-R10/tokendash"
+                href="https://github.com/Rihan-R10/hunch"
                 target="_blank"
                 rel="noreferrer"
                 className="flex items-center gap-1.5 transition-colors hover:text-cyan-200"
@@ -49,7 +49,7 @@ export default function Footer() {
               </a>
             </div>
             <p className="text-cyan-600">
-              © 2026 TokenDash. MIT License. Built for AI developers.
+              © 2026 Hunch. MIT License. Built for AI developers.
             </p>
           </div>
 
