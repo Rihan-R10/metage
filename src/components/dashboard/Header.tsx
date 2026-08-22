@@ -42,7 +42,7 @@ export function Header() {
             </div>
             <div>
               <h1 className="text-lg font-semibold tracking-tight text-zinc-50">
-                Hunch
+                Metage
               </h1>
               <p className="text-sm text-zinc-500">
                 Multi-provider API usage & rate limits

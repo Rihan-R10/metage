@@ -1,6 +1,6 @@
 <div align="center">
 
-# ⚡ Hunch
+# ⚡ Metage
 
 **Privacy-First Real-Time Telemetry & Zero-Trust API Key Management Dashboard**
 
@@ -9,10 +9,10 @@
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-3.4-06B6D4?style=for-the-badge&logo=tailwindcss&logoColor=white)](https://tailwindcss.com/)
 [![Zustand](https://img.shields.io/badge/State-Zustand-764ABC?style=for-the-badge)](https://github.com/pmndrs/zustand)
 [![Security](https://img.shields.io/badge/Security-AES--256--GCM-emerald?style=for-the-badge)](https://developer.mozilla.org/en-US/docs/Web/API/SubtleCrypto)
-[![Deployed on Vercel](https://img.shields.io/badge/Vercel-Deployed-000000?style=for-the-badge&logo=vercel&logoColor=white)](https://hunch-8n1kwzgw6-rihan-r11.vercel.app)
+[![Deployed on Vercel](https://img.shields.io/badge/Vercel-Deployed-000000?style=for-the-badge&logo=vercel&logoColor=white)](https://metage-8n1kwzgw6-rihan-r11.vercel.app)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](LICENSE)
 
-[**Explore Live Demo »**](https://hunch-8n1kwzgw6-rihan-r11.vercel.app) · [Report Bug](https://github.com/rihan-r11/hunch/issues) · [Request Feature](https://github.com/rihan-r11/hunch/issues)
+[**Explore Live Demo »**](https://metage-8n1kwzgw6-rihan-r11.vercel.app) · [Report Bug](https://github.com/rihan-r11/metage/issues) · [Request Feature](https://github.com/rihan-r11/metage/issues)
 
 </div>
 
@@ -20,7 +20,7 @@
 
 ## 🔒 Zero-Trust Security Architecture
 
-Hunch is built around a **zero-knowledge privacy model**. Your raw API keys are never written to unencrypted storage or transmitted in plaintext across the network.
+Metage is built around a **zero-knowledge privacy model**. Your raw API keys are never written to unencrypted storage or transmitted in plaintext across the network.
 
 ```
 ┌──────────────────────────────────────────────────────────┐
@@ -47,7 +47,7 @@ Hunch is built around a **zero-knowledge privacy model**. Your raw API keys are 
 
 ## 🛡️ Threat Model & Security Boundaries
 
-Hunch treats the network and third-party servers as untrusted zones. All credentials and sensitive telemetry remain bound to the client execution environment.
+Metage treats the network and third-party servers as untrusted zones. All credentials and sensitive telemetry remain bound to the client execution environment.
 
 | Threat Vector | Mitigation Strategy | Security Boundary |
 | :--- | :--- | :--- |
@@ -107,8 +107,8 @@ npm install -g pnpm
 
 1. **Clone the Repository:**
 ```bash
-git clone https://github.com/rihan-r11/hunch.git
-cd hunch
+git clone https://github.com/rihan-r11/metage.git
+cd metage
 ```
 
 2. **Install Dependencies:**
@@ -140,7 +140,7 @@ Open `http://localhost:3000` in your browser to view the application.
 ## 📂 Project Structure
 
 ```text
-hunch/
+metage/
 ├── src/
 │   ├── app/
 │   │   ├── api/

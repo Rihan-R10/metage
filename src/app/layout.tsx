@@ -11,7 +11,7 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Hunch | AI API Telemetry & Zero-Trust Proxy",
+  title: "Metage | AI API Telemetry & Zero-Trust Proxy",
   description:
     "Real-time, privacy-first LLM usage telemetry, latency metrics, and client-side encrypted key vault.",
 };

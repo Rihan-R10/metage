@@ -1,4 +1,4 @@
-const VAULT_STORAGE_KEY = 'hunch_vault_keys';
+const VAULT_STORAGE_KEY = 'metage_vault_keys';
 const PBKDF2_ITERATIONS = 100_000;
 const SALT_BYTES = 16;
 const IV_BYTES = 12;
