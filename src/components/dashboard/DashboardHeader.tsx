@@ -1,8 +1,9 @@
 'use client';
 
-import { Activity, RefreshCw, Shield } from 'lucide-react';
+import { RefreshCw, Shield } from 'lucide-react';
 import { useTokenStore } from '@/store/useTokenStore';
 import { useFormattedDate } from '@/hooks/useFormattedDate';
+import { Logo } from '@/components/ui/Logo';
 import { cn } from '@/lib/utils';
 
 export function DashboardHeader() {
@@ -21,9 +22,7 @@ export function DashboardHeader() {
     <header className="border-b border-slate-800 bg-[#09090b]/95 backdrop-blur">
       <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-5">
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg border border-emerald-500/30 bg-emerald-500/10">
-            <Activity className="h-5 w-5 text-emerald-400" />
-          </div>
+          <Logo size={40} />
           <div>
             <h1 className="text-lg font-semibold tracking-tight text-zinc-50">
               Metage

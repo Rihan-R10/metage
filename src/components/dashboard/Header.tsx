@@ -1,10 +1,11 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Activity, RefreshCw, ShieldCheck, AlertCircle } from 'lucide-react';
+import { RefreshCw, ShieldCheck, AlertCircle } from 'lucide-react';
 import { useFormattedDate } from '@/hooks/useFormattedDate';
 import { useTokenStore } from '@/store/useTokenStore';
 import { ApiKeyModal } from '@/components/dashboard/ApiKeyModal';
+import { Logo } from '@/components/ui/Logo';
 import { cn } from '@/lib/utils';
 
 const SYNC_TIME_OPTIONS: Intl.DateTimeFormatOptions = {
@@ -37,9 +38,7 @@ export function Header() {
       <header className="border-b border-slate-800 bg-[#09090b]/95 backdrop-blur">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-5">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg border border-emerald-500/30 bg-emerald-500/10">
-              <Activity className="h-5 w-5 text-emerald-400" />
-            </div>
+            <Logo size={40} />
             <div>
               <h1 className="text-lg font-semibold tracking-tight text-zinc-50">
                 Metage

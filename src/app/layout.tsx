@@ -11,9 +11,30 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || "https://metage.dev"),
   title: "Metage | AI API Telemetry & Zero-Trust Proxy",
   description:
     "Real-time, privacy-first LLM usage telemetry, latency metrics, and client-side encrypted key vault.",
+  openGraph: {
+    title: "Metage | AI API Telemetry & Zero-Trust Proxy",
+    description:
+      "Real-time, privacy-first LLM usage telemetry, latency metrics, and client-side encrypted key vault.",
+    images: [
+      {
+        url: "/logo.png",
+        width: 800,
+        height: 800,
+        alt: "Metage Logo",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary",
+    title: "Metage | AI API Telemetry & Zero-Trust Proxy",
+    description:
+      "Real-time, privacy-first LLM usage telemetry, latency metrics, and client-side encrypted key vault.",
+    images: ["/logo.png"],
+  },
 };
 
 export default function RootLayout({
