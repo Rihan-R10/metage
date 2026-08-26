@@ -11,6 +11,7 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
+  icons: { icon: "/logo.png", apple: "/logo.png" },
   metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || "https://metage.dev"),
   title: "Metage | AI API Telemetry & Zero-Trust Proxy",
   description:
