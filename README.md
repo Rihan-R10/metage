@@ -4,15 +4,43 @@
 
 **Privacy-First Real-Time Telemetry & Zero-Trust API Key Management Dashboard**
 
-[![Next.js 16](https://img.shields.io/badge/Next.js-16-black?style=for-the-badge&logo=nextdotjs)](https://nextjs.org/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.0-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
-[![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-3.4-06B6D4?style=for-the-badge&logo=tailwindcss&logoColor=white)](https://tailwindcss.com/)
-[![Zustand](https://img.shields.io/badge/State-Zustand-764ABC?style=for-the-badge)](https://github.com/pmndrs/zustand)
-[![Security](https://img.shields.io/badge/Security-AES--256--GCM-emerald?style=for-the-badge)](https://developer.mozilla.org/en-US/docs/Web/API/SubtleCrypto)
-[![Deployed on Vercel](https://img.shields.io/badge/Vercel-Deployed-000000?style=for-the-badge&logo=vercel&logoColor=white)](https://metage-8n1kwzgw6-rihan-r11.vercel.app)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](LICENSE)
+[
 
-[**Explore Live Demo »**](https://metage-8n1kwzgw6-rihan-r11.vercel.app) · [Report Bug](https://github.com/rihan-r11/metage/issues) · [Request Feature](https://github.com/rihan-r11/metage/issues)
+![Next.js 16](https://img.shields.io/badge/Next.js-16-black?style=for-the-badge&logo=nextdotjs)
+
+](https://nextjs.org/)
+[
+
+![TypeScript](https://img.shields.io/badge/TypeScript-5.0-3178C6?style=for-the-badge&logo=typescript&logoColor=white)
+
+](https://www.typescriptlang.org/)
+[
+
+![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-3.4-06B6D4?style=for-the-badge&logo=tailwindcss&logoColor=white)
+
+](https://tailwindcss.com/)
+[
+
+![Zustand](https://img.shields.io/badge/State-Zustand-764ABC?style=for-the-badge)
+
+](https://github.com/pmndrs/zustand)
+[
+
+![Security](https://img.shields.io/badge/Security-AES--256--GCM-emerald?style=for-the-badge)
+
+](https://developer.mozilla.org/en-US/docs/Web/API/SubtleCrypto)
+[
+
+![Deployed on Vercel](https://img.shields.io/badge/Vercel-Deployed-000000?style=for-the-badge&logo=vercel&logoColor=white)
+
+](https://metage.vercel.app)
+[
+
+![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)
+
+](LICENSE)
+
+[**Explore Live Demo »**](https://metage.vercel.app) · [Report Bug](https://github.com/Rihan-R10/metage/issues) · [Request Feature](https://github.com/Rihan-R10/metage/issues)
 
 </div>
 
@@ -107,7 +135,7 @@ npm install -g pnpm
 
 1. **Clone the Repository:**
 ```bash
-git clone https://github.com/rihan-r11/metage.git
+git clone https://github.com/Rihan-R10/metage.git
 cd metage
 ```
 
@@ -183,6 +211,6 @@ Distributed under the MIT License. See [`LICENSE`](LICENSE) for full details.
 
 <div align="center">
 
-**Built with ⚡ by [Rihan](https://github.com/rihan-r11)**
+**Built with ⚡ by [Rihan](https://github.com/Rihan-R10)**
 
 </div>
